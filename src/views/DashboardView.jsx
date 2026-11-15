@@ -28,36 +28,36 @@ export default function DashboardView({
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
       {/* Top Welcome Banner */}
-      <div className="bg-[#B5CC39] rounded-3xl p-6 sm:p-8 text-[#041534] shadow-lg border border-[#9EB82A]/40 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#1B2A4A] via-[#203359] to-[#283E6B] rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-[#283E6B]/60 relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-cover bg-center opacity-10 pointer-events-none" style={{ backgroundImage: 'url(/assets/illustration.png)' }}></div>
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#041534]/10 text-[#041534] border border-[#041534]/20 text-xs font-bold mb-2">
-              <span className="w-2 h-2 rounded-full bg-[#041534] animate-pulse"></span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 border border-white/15 text-xs font-bold mb-2 backdrop-blur-sm">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
               Sistem Aktif • PA Lumajang
             </div>
-            <h1 className="font-display font-extrabold text-2xl sm:text-3xl tracking-tight text-[#041534]">
+            <h1 className="font-display font-extrabold text-2xl sm:text-3xl tracking-tight text-white">
               Selamat Datang di Beranda KlikApeg
             </h1>
-            <p className="mt-1 text-sm text-[#041534]/85 font-medium max-w-2xl">
+            <p className="mt-1 text-sm text-gray-200 font-normal max-w-2xl leading-relaxed">
               Pantau jadwal Kenaikan Gaji Berkala (KGB) aparatur secara otomatis, buat Surat Tugas resmi, dan terbitkan lembar SPD tersinkronisasi.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <button
               onClick={onSync}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#D4A017] text-[#041534] hover:bg-[#c49212] transition-all shadow-sm border border-[#b5870d]/30"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#E1AD01] text-[#1B2A4A] hover:bg-[#cf9e00] transition-all shadow-md active:scale-95 border border-[#caa00e]"
             >
-              <span className={`material-symbols-outlined text-[18px] text-[#041534] ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}>sync</span>
+              <span className={`material-symbols-outlined text-[18px] text-[#1B2A4A] ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}>sync</span>
               <span>{syncStatus === 'syncing' ? 'Menyinkronkan...' : 'Sinkronkan KlikCuti'}</span>
             </button>
             <button
               onClick={() => onNavigate('surat-tugas')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#041534] text-white hover:bg-[#1B2A4A] transition-all shadow-md"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-[#1B2A4A] hover:bg-gray-100 transition-all shadow-md active:scale-95 border border-white/60"
             >
-              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              <span className="material-symbols-outlined text-[18px] text-[#1B2A4A]">add_circle</span>
               <span>Buat Surat Tugas</span>
             </button>
           </div>
