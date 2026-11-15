@@ -8,9 +8,85 @@ import DataPegawaiView from './views/DataPegawaiView';
 import LayananKgbView from './views/LayananKgbView';
 import SuratTugasView from './views/SuratTugasView';
 import SpdView from './views/SpdView';
+import PengaturanAkunView from './views/PengaturanAkunView';
 import { initialPegawai, initialSuratTugas, initialSpd, initialRiwayatKgb } from './data/mockData';
 import { fetchPegawaiFromKlikCuti } from './services/klikcutiService';
 import { checkKlikSuratConnection } from './services/kliksuratService';
+
+const defaultUsersList = [
+  {
+    id: 'USR-01',
+    nama: 'Siti Rahmawati, S.Kom.',
+    nip: '198906202014032002',
+    jabatan: 'Kasubbag Kepegawaian, Ortala & TI',
+    role: 'Admin Kepegawaian',
+    username: 'siti_rahmawati',
+    password: 'password123',
+    email: 'siti.rahmawati@pa-lumajang.go.id',
+    noHp: '081234567890',
+    status: 'Aktif'
+  },
+  {
+    id: 'USR-02',
+    nama: 'Drs. H. Ahmad Fauzi, M.H.ES.',
+    nip: '197508121998031001',
+    jabatan: 'Ketua Pengadilan Agama Lumajang',
+    role: 'Pimpinan Pengadilan',
+    username: 'ahmad_fauzi',
+    password: 'password123',
+    email: 'ahmad.fauzi@pa-lumajang.go.id',
+    noHp: '081234567891',
+    status: 'Aktif'
+  },
+  {
+    id: 'USR-03',
+    nama: 'Abdul Kodir, S.Ag., M.M.',
+    nip: '197303221998031004',
+    jabatan: 'Sekretaris PA Lumajang',
+    role: 'Admin Kepegawaian',
+    username: 'abdul_kodir',
+    password: 'password123',
+    email: 'abdul.kodir@pa-lumajang.go.id',
+    noHp: '081234567892',
+    status: 'Aktif'
+  },
+  {
+    id: 'USR-04',
+    nama: 'Fatkur Rosyad, S.Ag., M.H., M.HES.',
+    nip: '197603031998031002',
+    jabatan: 'Wakil Ketua PA Lumajang',
+    role: 'Pimpinan Pengadilan',
+    username: 'fatkur_rosyad',
+    password: 'password123',
+    email: 'fatkur.rosyad@pa-lumajang.go.id',
+    noHp: '081234567893',
+    status: 'Aktif'
+  },
+  {
+    id: 'USR-05',
+    nama: 'Bambang Sugiharto, S.H.',
+    nip: '198305142006041003',
+    jabatan: 'Sekretaris / PPK DIPA 04',
+    role: 'Pejabat Pembuat Komitmen (PPK)',
+    username: 'bambang_s',
+    password: 'password123',
+    email: 'bambang.s@pa-lumajang.go.id',
+    noHp: '081234567894',
+    status: 'Aktif'
+  },
+  {
+    id: 'USR-06',
+    nama: 'Rizky Ramadhani, S.H.',
+    nip: '199401122020121004',
+    jabatan: 'Staf Subbag Kepegawaian & TI',
+    role: 'Operator Kepegawaian & KGB',
+    username: 'rizky_r',
+    password: 'password123',
+    email: 'rizky.r@pa-lumajang.go.id',
+    noHp: '081234567895',
+    status: 'Aktif'
+  }
+];
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null); // null means on Login page
@@ -22,6 +98,49 @@ export default function App() {
   const [suratTugasList, setSuratTugasList] = useState(initialSuratTugas);
   const [spdList, setSpdList] = useState(initialSpd);
   const [riwayatKgbList, setRiwayatKgbList] = useState(initialRiwayatKgb);
+
+  // Pengelola Accounts State with localStorage persistence
+  const [usersList, setUsersList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('klikapeg_users_list');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      // ignore
+    }
+    return defaultUsersList;
+  });
+
+  const saveUsersList = (newList) => {
+    setUsersList(newList);
+    try {
+      localStorage.setItem('klikapeg_users_list', JSON.stringify(newList));
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleAddUser = (newUser) => {
+    const updated = [newUser, ...usersList];
+    saveUsersList(updated);
+  };
+
+  const handleUpdateUser = (id, updatedData) => {
+    const updated = usersList.map(u => u.id === id ? { ...u, ...updatedData } : u);
+    saveUsersList(updated);
+    if (currentUser && currentUser.id === id) {
+      setCurrentUser(prev => ({ ...prev, ...updatedData }));
+    }
+  };
+
+  const handleDeleteUser = (id) => {
+    const updated = usersList.filter(u => u.id !== id);
+    saveUsersList(updated);
+  };
+
+  const handleSwitchUser = (user) => {
+    setCurrentUser(user);
+    triggerToast(`Beralih akun sebagai: ${user.nama} (${user.role})`);
+  };
 
   // Cross-page selection bridge
   const [selectedPegawaiForKgb, setSelectedPegawaiForKgb] = useState(null);
@@ -35,9 +154,15 @@ export default function App() {
   };
 
   const handleLogin = (user) => {
-    setCurrentUser(user);
+    const matched = usersList.find(u => u.nip === user.nip || u.username === user.nip);
+    if (matched) {
+      setCurrentUser(matched);
+      triggerToast(`Selamat datang, ${matched.nama} (${matched.role})`);
+    } else {
+      setCurrentUser(user);
+      triggerToast(`Selamat datang, ${user.nama} (${user.role})`);
+    }
     setActivePage('dashboard');
-    triggerToast(`Selamat datang, ${user.nama} (${user.role})`);
   };
 
   const handleLogout = () => {
@@ -161,6 +286,7 @@ export default function App() {
           syncStatus={syncStatus}
           onSync={handleSyncKlikCuti}
           onLogout={handleLogout}
+          onNavigate={setActivePage}
         />
 
         {/* Global Notification Toast */}
@@ -222,6 +348,18 @@ export default function App() {
               spdList={spdList}
               selectedStForSpd={selectedStForSpd}
               onSaveSpd={handleSaveSpd}
+              onNavigate={setActivePage}
+            />
+          )}
+
+          {activePage === 'akun' && (
+            <PengaturanAkunView
+              usersList={usersList}
+              currentUser={currentUser}
+              onAddUser={handleAddUser}
+              onUpdateUser={handleUpdateUser}
+              onDeleteUser={handleDeleteUser}
+              onSwitchUser={handleSwitchUser}
               onNavigate={setActivePage}
             />
           )}

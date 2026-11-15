@@ -6,14 +6,16 @@ export default function Header({
   currentUser,
   syncStatus,
   onSync,
-  onLogout
+  onLogout,
+  onNavigate
 }) {
   const pageTitles = {
     'dashboard': { title: 'Beranda Kepegawaian', subtitle: 'Ringkasan & Pengingat KGB Aparatur' },
     'pegawai': { title: 'Data Pegawai', subtitle: 'Pangkalan Data Aparatur Terintegrasi KlikCuti' },
     'kgb': { title: 'Layanan Kenaikan Gaji Berkala (KGB)', subtitle: 'Kontrol Jadwal & Penerbitan SK KGB Resmi' },
     'surat-tugas': { title: 'Surat Tugas Kedinasan', subtitle: 'Formulir Penugasan & Penomoran Resmi PA Lumajang' },
-    'spd': { title: 'Surat Perjalanan Dinas (SPD)', subtitle: 'Penerbitan Lembar SPD Terhubung Surat Tugas' }
+    'spd': { title: 'Surat Perjalanan Dinas (SPD)', subtitle: 'Penerbitan Lembar SPD Terhubung Surat Tugas' },
+    'akun': { title: 'Pengaturan Akun Pengelola', subtitle: 'Manajemen Hak Akses, Kredensial & Sistem CRUD Aparatur' }
   };
 
   const currentInfo = pageTitles[activePage] || { title: 'KlikApeg', subtitle: 'Pengadilan Agama Lumajang' };
@@ -82,16 +84,20 @@ export default function Header({
           </button>
 
           {/* Quick User Avatar Badge */}
-          <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-white/20">
+          <div
+            onClick={() => onNavigate && onNavigate('akun')}
+            title="Klik untuk membuka Pengaturan Akun"
+            className="hidden sm:flex items-center gap-2 pl-2 border-l border-white/20 cursor-pointer hover:opacity-85 transition-opacity"
+          >
             <div className="w-8 h-8 rounded-full bg-amber-400 text-black font-extrabold flex items-center justify-center text-xs shadow-sm">
-              SR
+              {currentUser?.nama?.substring(0, 2)?.toUpperCase() || 'SR'}
             </div>
             <div className="hidden lg:block text-left text-xs">
               <p className="font-bold text-white leading-tight truncate max-w-[120px]">
                 {currentUser?.nama?.split(',')[0] || 'Siti Rahmawati'}
               </p>
               <p className="text-[10px] text-gray-300 truncate max-w-[120px]">
-                Kasubbag Kepegawaian
+                {currentUser?.role || 'Kasubbag Kepegawaian'}
               </p>
             </div>
           </div>

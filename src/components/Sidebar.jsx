@@ -12,7 +12,8 @@ export default function Sidebar({
     { id: 'pegawai', label: 'Data Pegawai', icon: 'group', desc: 'Pangkalan Data KlikCuti' },
     { id: 'kgb', label: 'Layanan KGB', icon: 'payments', desc: 'Jadwal & Cetak SK KGB' },
     { id: 'surat-tugas', label: 'Surat Tugas', icon: 'assignment', desc: 'Penugasan Kedinasan' },
-    { id: 'spd', label: 'SPD', icon: 'flight_takeoff', desc: 'Surat Perjalanan Dinas' }
+    { id: 'spd', label: 'SPD', icon: 'flight_takeoff', desc: 'Surat Perjalanan Dinas' },
+    { id: 'akun', label: 'Pengaturan Akun', icon: 'manage_accounts', desc: 'Kelola Pengelola & Akses' }
   ];
 
   return (
