@@ -12,34 +12,52 @@ import PengaturanAkunView from './views/PengaturanAkunView';
 import { initialPegawai, initialSuratTugas, initialSpd, initialRiwayatKgb } from './data/mockData';
 import { fetchPegawaiFromKlikCuti } from './services/klikcutiService';
 import { checkKlikSuratConnection } from './services/kliksuratService';
+import {
+  fetchKlikapegData,
+  saveKgbToSupabase,
+  saveSuratTugasToSupabase,
+  saveSpdToSupabase
+} from './services/klikapegService';
 
 const defaultUsersList = [
   {
     id: 'USR-01',
-    nama: 'Siti Rahmawati, S.Kom.',
-    nip: '198906202014032002',
-    jabatan: 'Kasubbag Kepegawaian, Ortala & TI',
+    nama: 'Mas Khabibah Nur, S.H.',
+    nip: '197011061994032004',
+    jabatan: 'Kepala Sub Bagian Kepegawaian, Organisasi dan Tata Laksana',
     role: 'Admin Kepegawaian',
-    username: 'siti_rahmawati',
+    username: 'mas_khabibah',
     password: 'password123',
-    email: 'siti.rahmawati@pa-lumajang.go.id',
-    noHp: '081234567890',
+    email: 'khabibahnur@pa-lumajang.go.id',
+    noHp: '085232575331',
     status: 'Aktif'
   },
   {
     id: 'USR-02',
-    nama: 'Drs. H. Ahmad Fauzi, M.H.ES.',
-    nip: '197508121998031001',
+    nama: 'Fatkur Rosyad, S.Ag., M.H., M.HES.',
+    nip: '197603031998031002',
     jabatan: 'Ketua Pengadilan Agama Lumajang',
     role: 'Pimpinan Pengadilan',
-    username: 'ahmad_fauzi',
+    username: 'fatkur_rosyad',
     password: 'password123',
-    email: 'ahmad.fauzi@pa-lumajang.go.id',
+    email: 'fatkur.rosyad@pa-lumajang.go.id',
     noHp: '081234567891',
     status: 'Aktif'
   },
   {
     id: 'USR-03',
+    nama: 'Samsul Bahri, S.H.I., M.H.',
+    nip: '198109142006041002',
+    jabatan: 'Wakil Ketua PA Lumajang',
+    role: 'Pimpinan Pengadilan',
+    username: 'samsul_bahri',
+    password: 'password123',
+    email: 'samsul.bahri@pa-lumajang.go.id',
+    noHp: '081234567892',
+    status: 'Aktif'
+  },
+  {
+    id: 'USR-04',
     nama: 'Abdul Kodir, S.Ag., M.M.',
     nip: '197303221998031004',
     jabatan: 'Sekretaris PA Lumajang',
@@ -47,42 +65,30 @@ const defaultUsersList = [
     username: 'abdul_kodir',
     password: 'password123',
     email: 'abdul.kodir@pa-lumajang.go.id',
-    noHp: '081234567892',
-    status: 'Aktif'
-  },
-  {
-    id: 'USR-04',
-    nama: 'Fatkur Rosyad, S.Ag., M.H., M.HES.',
-    nip: '197603031998031002',
-    jabatan: 'Wakil Ketua PA Lumajang',
-    role: 'Pimpinan Pengadilan',
-    username: 'fatkur_rosyad',
-    password: 'password123',
-    email: 'fatkur.rosyad@pa-lumajang.go.id',
-    noHp: '081234567893',
+    noHp: '085232575331',
     status: 'Aktif'
   },
   {
     id: 'USR-05',
-    nama: 'Bambang Sugiharto, S.H.',
-    nip: '198305142006041003',
-    jabatan: 'Sekretaris / PPK DIPA 04',
+    nama: 'Dr. Rozy Alifian Mukhtar, S.H., M.Kn.',
+    nip: '198807132015031001',
+    jabatan: 'Kepala Sub Bagian Umum dan Keuangan',
     role: 'Pejabat Pembuat Komitmen (PPK)',
-    username: 'bambang_s',
+    username: 'rozy_alifian',
     password: 'password123',
-    email: 'bambang.s@pa-lumajang.go.id',
+    email: 'rozy.alifian@pa-lumajang.go.id',
     noHp: '081234567894',
     status: 'Aktif'
   },
   {
     id: 'USR-06',
-    nama: 'Rizky Ramadhani, S.H.',
-    nip: '199401122020121004',
-    jabatan: 'Staf Subbag Kepegawaian & TI',
+    nama: 'Nindyra Ayu Sagita, S.Sos.',
+    nip: '199411262019032008',
+    jabatan: 'Analis Sumber Daya Manusia Aparatur Ahli Muda',
     role: 'Operator Kepegawaian & KGB',
-    username: 'rizky_r',
+    username: 'nindyra_ayu',
     password: 'password123',
-    email: 'rizky.r@pa-lumajang.go.id',
+    email: 'nindyra.ayu@pa-lumajang.go.id',
     noHp: '081234567895',
     status: 'Aktif'
   }
@@ -103,7 +109,14 @@ export default function App() {
   const [usersList, setUsersList] = useState(() => {
     try {
       const saved = localStorage.getItem('klikapeg_users_list');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.some(u => u.nama?.includes('Siti Rahmawati') || u.nama?.includes('Ahmad Fauzi') || u.nama?.includes('Bambang Sugiharto'))) {
+          localStorage.setItem('klikapeg_users_list', JSON.stringify(defaultUsersList));
+          return defaultUsersList;
+        }
+        return parsed;
+      }
     } catch (e) {
       // ignore
     }
@@ -180,6 +193,7 @@ export default function App() {
   const loadDataFromKlikCuti = async (isManual = false) => {
     if (isManual) setSyncStatus('syncing');
     try {
+      // 1. Ambil data pegawai resmi dari Supabase KlikCuti
       const resCuti = await fetchPegawaiFromKlikCuti();
       if (resCuti.success && resCuti.data.length > 0) {
         setPegawaiList(resCuti.data);
@@ -193,6 +207,19 @@ export default function App() {
         }));
       }
 
+      // 2. Ambil data riil KGB, Surat Tugas, & SPD dari Supabase KlikApeg
+      const resApeg = await fetchKlikapegData();
+      if (resApeg.kgb && resApeg.kgb.length > 0) {
+        setRiwayatKgbList(resApeg.kgb);
+      }
+      if (resApeg.suratTugas && resApeg.suratTugas.length > 0) {
+        setSuratTugasList(resApeg.suratTugas);
+      }
+      if (resApeg.spd && resApeg.spd.length > 0) {
+        setSpdList(resApeg.spd);
+      }
+
+      // 3. Cek koneksi register naskah dinas KlikSurat
       const resSurat = await checkKlikSuratConnection();
       setDbStatus(prev => ({
         ...prev,
@@ -205,8 +232,8 @@ export default function App() {
       if (isManual) {
         setSyncStatus('idle');
         const count = resCuti.data?.length || 35;
-        const kgbCount = resCuti.masterKgbCount || 23;
-        triggerToast(`Sinkronisasi Berhasil: ${count} data aparatur terhubung langsung (${kgbCount} tersinkron Master Data KGB KlikCuti).`);
+        const kgbCount = resApeg.kgb?.length || 23;
+        triggerToast(`Sinkronisasi Berhasil: ${count} data aparatur terhubung langsung (${kgbCount} tersinkron Database Supabase KlikApeg & KlikCuti).`);
       }
     } catch (err) {
       if (isManual) {
@@ -239,14 +266,20 @@ export default function App() {
       }
       return p;
     }));
+    // Simpan ke Supabase KlikApeg
+    saveKgbToSupabase(newKgb);
   };
 
   const handleSaveSuratTugas = (newSt) => {
     setSuratTugasList([newSt, ...suratTugasList]);
+    // Simpan ke Supabase KlikApeg
+    saveSuratTugasToSupabase(newSt);
   };
 
   const handleSaveSpd = (newSpd) => {
     setSpdList([newSpd, ...spdList]);
+    // Simpan ke Supabase KlikApeg
+    saveSpdToSupabase(newSpd);
   };
 
   const handleSelectPegawaiForKgb = (pegawai) => {

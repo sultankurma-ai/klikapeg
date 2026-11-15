@@ -67,11 +67,11 @@ export default function Navbar({ activePage, setActivePage, currentUser, onLogou
             {/* Profile Dropdown / Card */}
             <div className="flex items-center gap-2 pl-2 border-l border-outline-variant">
               <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs ring-2 ring-secondary-container/40">
-                SR
+                MK
               </div>
               <div className="text-left text-xs">
                 <p className="font-semibold text-primary leading-tight truncate max-w-[130px]">
-                  {currentUser?.nama || 'Siti Rahmawati'}
+                  {currentUser?.nama || 'Mas Khabibah Nur'}
                 </p>
                 <p className="text-[10px] text-outline truncate max-w-[130px]">
                   {currentUser?.jabatan || 'Kasubbag Kepegawaian'}
@@ -140,10 +140,10 @@ export default function Navbar({ activePage, setActivePage, currentUser, onLogou
           <div className="pt-3 mt-2 border-t border-outline-variant/50 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-xs">
-                SR
+                MK
               </div>
               <div className="text-left text-xs">
-                <p className="font-semibold text-primary">{currentUser?.nama || 'Siti Rahmawati'}</p>
+                <p className="font-semibold text-primary">{currentUser?.nama || 'Mas Khabibah Nur'}</p>
                 <p className="text-[10px] text-outline">Kasubbag Kepegawaian & Ortala</p>
               </div>
             </div>

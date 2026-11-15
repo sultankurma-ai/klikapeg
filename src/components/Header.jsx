@@ -59,11 +59,11 @@ export default function Header({
             className="flex items-center gap-2 pl-2 border-l border-white/20 cursor-pointer hover:opacity-85 transition-opacity"
           >
             <div className="w-8 h-8 rounded-full bg-amber-400 text-black font-extrabold flex items-center justify-center text-xs shadow-sm">
-              {currentUser?.nama?.substring(0, 2)?.toUpperCase() || 'SR'}
+              {currentUser?.nama?.substring(0, 2)?.toUpperCase() || 'MK'}
             </div>
             <div className="hidden sm:block text-left text-xs">
               <p className="font-bold text-white leading-tight truncate max-w-[140px]">
-                {currentUser?.nama?.split(',')[0] || 'Siti Rahmawati'}
+                {currentUser?.nama?.split(',')[0] || 'Mas Khabibah'}
               </p>
               <p className="text-[10px] text-gray-300 truncate max-w-[140px]">
                 {currentUser?.role || 'Kasubbag Kepegawaian'}

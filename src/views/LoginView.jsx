@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export default function LoginView({ onLogin }) {
-  const [nip, setNip] = useState('198906202014032002'); // Siti Rahmawati
+  const [nip, setNip] = useState('197011061994032004'); // Mas Khabibah Nur, S.H.
   const [password, setPassword] = useState('lumajang2026');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -17,12 +17,12 @@ export default function LoginView({ onLogin }) {
       return;
     }
     setErrorMsg('');
-    const isPimpinan = nip === '197508121998031001' || nip.toLowerCase() === 'ketua';
+    const isPimpinan = nip === '197603031998031002' || nip.toLowerCase() === 'ketua' || nip === '198109142006041002';
     onLogin({
       nip: nip,
-      nama: isPimpinan ? 'Drs. H. Ahmad Fauzi, M.H.ES.' : 'Siti Rahmawati, S.Kom.',
-      role: isPimpinan ? 'Pimpinan' : 'Admin Kepegawaian',
-      jabatan: isPimpinan ? 'Ketua Pengadilan Agama Lumajang' : 'Kasubbag Kepegawaian, Ortala & TI'
+      nama: isPimpinan ? 'Fatkur Rosyad, S.Ag., M.H., M.HES.' : 'Mas Khabibah Nur, S.H.',
+      role: isPimpinan ? 'Pimpinan Pengadilan' : 'Admin Kepegawaian',
+      jabatan: isPimpinan ? 'Ketua Pengadilan Agama Lumajang' : 'Kepala Sub Bagian Kepegawaian, Organisasi dan Tata Laksana'
     });
   };
 

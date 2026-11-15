@@ -148,7 +148,7 @@ export async function registerSuratKeluarToKlikSurat(suratData) {
     nomor_surat: suratData.nomorSurat,
     agenda: `APEG-${String(Date.now()).slice(-4)}`,
     unit_pengusul: 'Subbag Kepegawaian, Ortala & TI',
-    pembuat: 'Siti Rahmawati, S.Kom.',
+    pembuat: suratData.pembuat || 'Mas Khabibah Nur, S.H.',
     tujuan_surat: suratData.tujuanSurat || 'Aparatur Ditugaskan',
     perihal: suratData.perihal || 'Penerbitan Naskah Resmi KlikApeg',
     tanggal_surat: suratData.tanggalSuratIso || new Date().toISOString().slice(0, 10),
