@@ -10,12 +10,12 @@ export default function Sidebar({
   setIsOpen
 }) {
   const navItems = [
-    { id: 'dashboard', label: 'Beranda', icon: 'dashboard', desc: 'Otomatisasi Administrasi Pegawai' },
-    { id: 'pegawai', label: 'Data Pegawai', icon: 'group', desc: 'Pangkalan Data KlikCuti' },
-    { id: 'kgb', label: 'Layanan KGB', icon: 'payments', desc: 'Jadwal & Cetak SK KGB' },
-    { id: 'surat-tugas', label: 'Surat Tugas', icon: 'assignment', desc: 'Penugasan Kedinasan' },
-    { id: 'spd', label: 'SPD', icon: 'flight_takeoff', desc: 'Surat Perjalanan Dinas' },
-    { id: 'akun', label: 'Pengaturan Akun', icon: 'manage_accounts', desc: 'Kelola Pengelola & Akses' }
+    { id: 'dashboard', label: 'Beranda', icon: 'dashboard' },
+    { id: 'pegawai', label: 'Data Pegawai', icon: 'group' },
+    { id: 'kgb', label: 'Layanan KGB', icon: 'payments' },
+    { id: 'surat-tugas', label: 'Surat Tugas', icon: 'assignment' },
+    { id: 'spd', label: 'SPD', icon: 'flight_takeoff' },
+    { id: 'akun', label: 'Pengaturan Akun', icon: 'manage_accounts' }
   ];
 
   return (
@@ -75,7 +75,7 @@ export default function Sidebar({
             Menu Utama & Layanan
           </p>
 
-          <nav className="space-y-2">
+          <nav className="space-y-1.5">
             {navItems.map((item) => {
               const isActive = activePage === item.id;
               return (
@@ -85,48 +85,39 @@ export default function Sidebar({
                     setActivePage(item.id);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all duration-150 text-left group ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-150 text-left group ${
                     isActive
-                      ? 'bg-primary text-on-primary shadow-lg ring-2 ring-primary/20'
-                      : 'bg-white/95 hover:bg-white text-on-surface-variant hover:text-primary shadow-sm hover:shadow-md border border-black/5'
+                      ? 'bg-[#1B2A4A] text-white shadow-md ring-2 ring-[#1B2A4A]/20'
+                      : 'bg-white/95 hover:bg-white text-[#041534] hover:text-[#1B2A4A] shadow-xs hover:shadow-sm border border-black/5'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
                         isActive
-                          ? 'bg-secondary-container text-on-secondary-container shadow-sm'
-                          : 'bg-surface-container text-primary group-hover:bg-primary-fixed/40'
+                          ? 'bg-[#E1AD01] text-[#1B2A4A] shadow-xs'
+                          : 'bg-black/5 text-[#041534] group-hover:bg-[#E1AD01]/30 group-hover:text-[#1B2A4A]'
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[20px]">
+                      <span className="material-symbols-outlined text-[19px]">
                         {item.icon}
                       </span>
                     </div>
 
-                    <div className="truncate">
-                      <p
-                        className={`font-display font-bold text-xs leading-tight truncate ${
-                          isActive ? 'text-white' : 'text-primary'
-                        }`}
-                      >
-                        {item.label}
-                      </p>
-                      <p
-                        className={`text-[10px] truncate mt-0.5 ${
-                          isActive ? 'text-primary-fixed-dim' : 'text-outline'
-                        }`}
-                      >
-                        {item.desc}
-                      </p>
-                    </div>
+                    <span
+                      className={`font-display font-bold text-xs sm:text-[13px] leading-tight truncate ${
+                        isActive ? 'text-white' : 'text-[#041534]'
+                      }`}
+                    >
+                      {item.label}
+                    </span>
                   </div>
 
                   <span
                     className={`material-symbols-outlined text-[16px] transition-transform ${
                       isActive
-                        ? 'text-secondary-container translate-x-0.5'
-                        : 'text-outline/40 group-hover:text-primary group-hover:translate-x-1'
+                        ? 'text-[#E1AD01] translate-x-0.5'
+                        : 'text-black/30 group-hover:text-[#1B2A4A] group-hover:translate-x-1'
                     }`}
                   >
                     chevron_right
