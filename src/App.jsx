@@ -205,7 +205,8 @@ export default function App() {
       if (isManual) {
         setSyncStatus('idle');
         const count = resCuti.data?.length || 35;
-        triggerToast(`Sinkronisasi Berhasil: ${count} data aparatur terhubung langsung dari Database KlikCuti & Server KlikSurat Aktif.`);
+        const kgbCount = resCuti.masterKgbCount || 23;
+        triggerToast(`Sinkronisasi Berhasil: ${count} data aparatur terhubung langsung (${kgbCount} tersinkron Master Data KGB KlikCuti).`);
       }
     } catch (err) {
       if (isManual) {

@@ -86,20 +86,21 @@ export default function DataPegawaiView({
       {/* Sync Status Banner */}
       <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-[20px]">cloud_done</span>
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+            <span className="material-symbols-outlined text-[22px]">cloud_done</span>
           </div>
           <div>
-            <p className="font-bold text-emerald-950">
-              Integrasi Database KlikCuti: Aktif & Tersinkronisasi Penuh
+            <p className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+              <span>Database KlikCuti: Master Data KGB Terkoneksi Real-Time</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-700 text-white font-bold">Terhubung</span>
             </p>
-            <p className="text-emerald-800 text-[11px]">
-              Setiap pembaruan identitas, jabatan, atau pangkat di aplikasi KlikCuti otomatis terhubung tanpa input ulang.
+            <p className="text-emerald-800 text-[11px] mt-0.5">
+              Data aparatur, TMT KGB terakhir, jadwal KGB berikutnya, dan nomor SK tersinkronisasi langsung dari tabel <code className="bg-emerald-100/80 px-1 py-0.5 rounded font-mono text-emerald-900 font-semibold">master_kgb</code> Database KlikCuti PA Lumajang.
             </p>
           </div>
         </div>
-        <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full self-start sm:self-auto">
-          Status: Real-Time Sync ({pegawaiList.length} Aparatur)
+        <span className="text-[11px] font-bold text-emerald-900 bg-white border border-emerald-200 px-3 py-1.5 rounded-full self-start sm:self-auto shadow-2xs">
+          {pegawaiList.length} Aparatur • Master KGB Aktif
         </span>
       </div>
 
@@ -168,7 +169,7 @@ export default function DataPegawaiView({
                 <th className="py-3.5 px-4">Pegawai</th>
                 <th className="py-3.5 px-4">Pangkat / Gol</th>
                 <th className="py-3.5 px-4">Jabatan & Unit</th>
-                <th className="py-3.5 px-4">TMT KGB Terakhir</th>
+                <th className="py-3.5 px-4">TMT KGB &amp; SK Terakhir</th>
                 <th className="py-3.5 px-4">Gaji Pokok</th>
                 <th className="py-3.5 px-4 text-center">Status KGB</th>
                 <th className="py-3.5 px-4 text-center">Aksi</th>
@@ -229,8 +230,17 @@ export default function DataPegawaiView({
                       </td>
 
                       <td className="py-3 px-4">
-                        <span className="font-medium text-primary">{pegawai.tmtKgbTerakhir}</span>
-                        <p className="text-[11px] text-outline">MKG: {pegawai.mkgTahun} Th 0 Bln</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-primary">{pegawai.tmtKgbTerakhir}</span>
+                          {pegawai.hasMasterKgb && (
+                            <span title="Data resmi dari menu Master Data KGB KlikCuti" className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-sky-100 text-sky-800 border border-sky-300">
+                              Master KGB
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-outline font-mono truncate max-w-[170px] mt-0.5" title={pegawai.noSkTerakhir}>
+                          SK: {pegawai.noSkTerakhir || '-'}
+                        </p>
                       </td>
 
                       <td className="py-3 px-4 font-semibold text-primary">
@@ -335,10 +345,20 @@ export default function DataPegawaiView({
               <div className="p-3 rounded-xl bg-surface-container-low">
                 <span className="text-outline text-[11px] block">TMT KGB Terakhir:</span>
                 <span className="font-bold text-primary">{selectedPegawaiDetail.tmtKgbTerakhir}</span>
+                {selectedPegawaiDetail.noSkTerakhir && selectedPegawaiDetail.noSkTerakhir !== '-' && (
+                  <span className="text-[10.5px] text-outline font-mono block mt-0.5 truncate" title={selectedPegawaiDetail.noSkTerakhir}>
+                    SK: {selectedPegawaiDetail.noSkTerakhir}
+                  </span>
+                )}
               </div>
               <div className="p-3 rounded-xl bg-surface-container-low">
                 <span className="text-outline text-[11px] block">Jadwal KGB Berikutnya:</span>
                 <span className="font-bold text-error">{selectedPegawaiDetail.tmtKgbBerikutnya}</span>
+                {selectedPegawaiDetail.hasMasterKgb && (
+                  <span className="text-[10.5px] text-sky-700 font-semibold block mt-0.5">
+                    ✓ Sumber: Master Data KGB
+                  </span>
+                )}
               </div>
               <div className="p-3 rounded-xl bg-surface-container-low">
                 <span className="text-outline text-[11px] block">Gaji Pokok Terakhir:</span>
