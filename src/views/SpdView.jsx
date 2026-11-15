@@ -464,41 +464,51 @@ export default function SpdView({
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/40">
-              {filteredArchive.map((spd) => (
-                <tr key={spd.id} className="hover:bg-surface-container-low transition-colors">
-                  <td className="py-3 px-4 font-bold text-primary font-mono text-[11px]">
-                    {spd.nomorSpd}
-                  </td>
-                  <td className="py-3 px-4 font-mono text-outline text-[10px]">
-                    {spd.nomorSuratTugas}
-                  </td>
-                  <td className="py-3 px-4">
-                    <p className="font-bold text-primary">{spd.pelaksana.nama}</p>
-                    <p className="text-[10px] text-outline">{spd.pelaksana.jabatan}</p>
-                  </td>
-                  <td className="py-3 px-4 max-w-xs">
-                    <p className="font-semibold text-primary truncate">{spd.tempatTujuan}</p>
-                    <p className="text-[11px] text-outline truncate">{spd.maksudPerjalanan}</p>
-                  </td>
-                  <td className="py-3 px-4 font-semibold text-primary">
-                    {spd.tanggalBerangkat} ({spd.lamaHari} hari)
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      {spd.statusSpd}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <button
-                      onClick={() => handleOpenPreview(spd)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-container text-primary hover:bg-primary hover:text-white transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">print</span>
-                      <span>Cetak Ulang</span>
-                    </button>
+              {filteredArchive.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-12 text-center text-outline">
+                    <span className="material-symbols-outlined text-4xl mb-2 text-outline/60 block">flight_takeoff</span>
+                    <p className="font-semibold text-xs text-primary">Belum ada arsip Surat Perjalanan Dinas (SPD)</p>
+                    <p className="text-[11px] text-outline mt-0.5">Seluruh data contoh telah dibersihkan. Silakan terbitkan lembar SPD resmi baru melalui formulir di atas.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredArchive.map((spd) => (
+                  <tr key={spd.id} className="hover:bg-surface-container-low transition-colors">
+                    <td className="py-3 px-4 font-bold text-primary font-mono text-[11px]">
+                      {spd.nomorSpd}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-outline text-[10px]">
+                      {spd.nomorSuratTugas}
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="font-bold text-primary">{spd.pelaksana?.nama || '-'}</p>
+                      <p className="text-[10px] text-outline">{spd.pelaksana?.jabatan || '-'}</p>
+                    </td>
+                    <td className="py-3 px-4 max-w-xs">
+                      <p className="font-semibold text-primary truncate">{spd.tempatTujuan}</p>
+                      <p className="text-[11px] text-outline truncate">{spd.maksudPerjalanan}</p>
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-primary">
+                      {spd.tanggalBerangkat} ({spd.lamaHari} hari)
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        {spd.statusSpd}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={() => handleOpenPreview(spd)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-container text-primary hover:bg-primary hover:text-white transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">print</span>
+                        <span>Cetak Ulang</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

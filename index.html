@@ -18,6 +18,19 @@
 </head>
 
 <body class="bg-background text-on-background font-body-md antialiased min-h-screen">
+  <script>
+    // Pembersihan instan seluruh cache data contoh lama di browser
+    (function () {
+      try {
+        ['klikapeg_db_cache_spd', 'klikapeg_db_cache_st', 'klikapeg_spd_list', 'klikapeg_surat_tugas_list', 'klikapeg_users_list'].forEach(function (key) {
+          var val = localStorage.getItem(key);
+          if (val && (val.indexOf('Siti Rahmawati') !== -1 || val.indexOf('SPD/142') !== -1 || val.indexOf('ST/304') !== -1 || val.indexOf('Muhammad Syaifuddin') !== -1 || val.indexOf('ST-2026') !== -1 || val.indexOf('SPD-2026') !== -1)) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (e) { }
+    })();
+  </script>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>

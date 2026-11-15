@@ -297,36 +297,46 @@ export default function DashboardView({
 
             {/* Quick Log Items */}
             <div className="mt-4 space-y-3">
-              {suratTugasList.slice(0, 2).map((st) => (
-                <div key={st.id} className="p-3 rounded-2xl bg-surface-container-low border border-outline-variant/40 space-y-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-primary truncate max-w-[170px]">{st.nomorSurat}</span>
-                    <span className="text-outline">{st.tanggalSurat}</span>
-                  </div>
-                  <p className="text-xs text-on-surface-variant font-medium line-clamp-2">
-                    {st.maksudTugas}
-                  </p>
-                  <div className="flex items-center justify-between pt-1 text-[11px]">
-                    <span className="text-outline">{st.pegawaiList.length} Aparatur Ditugaskan</span>
-                    <span className="text-emerald-700 font-bold">{st.status}</span>
-                  </div>
+              {suratTugasList.length === 0 && spdList.length === 0 ? (
+                <div className="py-6 text-center text-outline">
+                  <span className="material-symbols-outlined text-2xl text-outline/50 mb-1 block">description</span>
+                  <p className="text-xs font-semibold text-primary">Belum ada aktivitas surat dinas</p>
+                  <p className="text-[11px] text-outline mt-0.5">Surat Tugas dan SPD yang diterbitkan akan tampil di sini</p>
                 </div>
-              ))}
+              ) : (
+                <>
+                  {suratTugasList.slice(0, 2).map((st) => (
+                    <div key={st.id} className="p-3 rounded-2xl bg-surface-container-low border border-outline-variant/40 space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-primary truncate max-w-[170px]">{st.nomorSurat}</span>
+                        <span className="text-outline">{st.tanggalSurat}</span>
+                      </div>
+                      <p className="text-xs text-on-surface-variant font-medium line-clamp-2">
+                        {st.maksudTugas}
+                      </p>
+                      <div className="flex items-center justify-between pt-1 text-[11px]">
+                        <span className="text-outline">{st.pegawaiList?.length || 0} Aparatur Ditugaskan</span>
+                        <span className="text-emerald-700 font-bold">{st.status}</span>
+                      </div>
+                    </div>
+                  ))}
 
-              {spdList.slice(0, 1).map((spd) => (
-                <div key={spd.id} className="p-3 rounded-2xl bg-secondary-fixed/20 border border-secondary/20 space-y-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-bold text-secondary truncate max-w-[170px]">{spd.nomorSpd}</span>
-                    <span className="text-outline">{spd.lamaHari} Hari</span>
-                  </div>
-                  <p className="text-xs text-primary font-medium line-clamp-1">
-                    {spd.pelaksana.nama}
-                  </p>
-                  <p className="text-[11px] text-outline truncate">
-                    Tujuan: {spd.tempatTujuan}
-                  </p>
-                </div>
-              ))}
+                  {spdList.slice(0, 1).map((spd) => (
+                    <div key={spd.id} className="p-3 rounded-2xl bg-secondary-fixed/20 border border-secondary/20 space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-secondary truncate max-w-[170px]">{spd.nomorSpd}</span>
+                        <span className="text-outline">{spd.lamaHari} Hari</span>
+                      </div>
+                      <p className="text-xs text-primary font-medium line-clamp-1">
+                        {spd.pelaksana?.nama || '-'}
+                      </p>
+                      <p className="text-[11px] text-outline truncate">
+                        Tujuan: {spd.tempatTujuan}
+                      </p>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
 
             {/* Quick Action Buttons */}

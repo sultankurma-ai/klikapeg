@@ -16,9 +16,9 @@ const kliksuratAnonKey =
   import.meta.env.VITE_KLIKSURAT_SUPABASE_ANON_KEY || 'sb_publishable_QEFYm2gJsVrp1FB6SRQlXQ_ahrQJ1Zz';
 
 const klikapegUrl =
-  import.meta.env.VITE_SUPABASE_URL || '';
+  import.meta.env.VITE_SUPABASE_URL || 'https://oxphycpabzqamsbueons.supabase.co';
 const klikapegAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Qmhdp8dj0NADM1T4Z7Kcjg_ayZuxJAQ';
 
 export const KLIKCUTI_CONFIG = {
   name: 'Database KlikCuti',

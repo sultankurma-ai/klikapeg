@@ -589,49 +589,59 @@ export default function SuratTugasView({
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/40">
-              {filteredArchive.map((st) => (
-                <tr key={st.id} className="hover:bg-surface-container-low transition-colors">
-                  <td className="py-3 px-4 font-bold text-primary font-mono text-[11px]">
-                    {st.nomorSurat}
-                  </td>
-                  <td className="py-3 px-4 text-outline">{st.tanggalSurat}</td>
-                  <td className="py-3 px-4">
-                    <p className="font-bold text-primary">{st.pegawaiList[0]?.nama}</p>
-                    {st.pegawaiList.length > 1 && (
-                      <span className="text-[10px] text-secondary font-bold">
-                        +{st.pegawaiList.length - 1} aparatur lainnya
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 max-w-xs">
-                    <p className="font-semibold text-primary truncate">{st.maksudTugas}</p>
-                    <p className="text-[11px] text-outline truncate">{st.tempatTujuan}</p>
-                  </td>
-                  <td className="py-3 px-4 font-semibold text-primary">
-                    {st.lamaHari} Hari
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button
-                        onClick={() => handleOpenPreview(st)}
-                        title="Cetak Ulang Dokumen"
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-surface-container text-primary hover:bg-primary hover:text-white transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">print</span>
-                        <span>Cetak</span>
-                      </button>
-                      <button
-                        onClick={() => onCreateSpdFromSt(st)}
-                        title="Buat Lembar SPD dari Surat Tugas ini"
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-secondary-container text-on-secondary-container hover:bg-secondary-fixed transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">flight_takeoff</span>
-                        <span>Buat SPD</span>
-                      </button>
-                    </div>
+              {filteredArchive.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="py-12 text-center text-outline">
+                    <span className="material-symbols-outlined text-4xl mb-2 text-outline/60 block">assignment</span>
+                    <p className="font-semibold text-xs text-primary">Belum ada arsip Surat Tugas</p>
+                    <p className="text-[11px] text-outline mt-0.5">Seluruh data contoh telah dibersihkan. Silakan terbitkan Surat Tugas resmi baru melalui formulir di atas.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredArchive.map((st) => (
+                  <tr key={st.id} className="hover:bg-surface-container-low transition-colors">
+                    <td className="py-3 px-4 font-bold text-primary font-mono text-[11px]">
+                      {st.nomorSurat}
+                    </td>
+                    <td className="py-3 px-4 text-outline">{st.tanggalSurat}</td>
+                    <td className="py-3 px-4">
+                      <p className="font-bold text-primary">{st.pegawaiList[0]?.nama}</p>
+                      {st.pegawaiList.length > 1 && (
+                        <span className="text-[10px] text-secondary font-bold">
+                          +{st.pegawaiList.length - 1} aparatur lainnya
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 max-w-xs">
+                      <p className="font-semibold text-primary truncate">{st.maksudTugas}</p>
+                      <p className="text-[11px] text-outline truncate">{st.tempatTujuan}</p>
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-primary">
+                      {st.lamaHari} Hari
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenPreview(st)}
+                          title="Cetak Ulang Dokumen"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-surface-container text-primary hover:bg-primary hover:text-white transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">print</span>
+                          <span>Cetak</span>
+                        </button>
+                        <button
+                          onClick={() => onCreateSpdFromSt(st)}
+                          title="Buat Lembar SPD dari Surat Tugas ini"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-secondary-container text-on-secondary-container hover:bg-secondary-fixed transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">flight_takeoff</span>
+                          <span>Buat SPD</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -102,8 +102,8 @@ export async function fetchKlikapegData() {
         success: true,
         source: 'Supabase-KlikApeg',
         kgb: kgb.length > 0 ? kgb : initialRiwayatKgb,
-        suratTugas: suratTugas.length > 0 ? suratTugas : initialSuratTugas,
-        spd: spd.length > 0 ? spd : initialSpd
+        suratTugas: suratTugas,
+        spd: spd
       };
     }
   } catch (err) {
@@ -115,20 +115,42 @@ export async function fetchKlikapegData() {
     const cachedKgb = localStorage.getItem(`${STORAGE_KEY_PREFIX}kgb`);
     const cachedSt = localStorage.getItem(`${STORAGE_KEY_PREFIX}st`);
     const cachedSpd = localStorage.getItem(`${STORAGE_KEY_PREFIX}spd`);
+
+    // Pastikan tidak ada data contoh lama yang terbawa dari cache lokal
+    let stData = [];
+    if (cachedSt) {
+      try {
+        const parsed = JSON.parse(cachedSt);
+        if (Array.isArray(parsed) && !JSON.stringify(parsed).includes('Siti Rahmawati') && !JSON.stringify(parsed).includes('ST/304')) {
+          stData = parsed;
+        }
+      } catch (e) {}
+    }
+
+    let spdData = [];
+    if (cachedSpd) {
+      try {
+        const parsed = JSON.parse(cachedSpd);
+        if (Array.isArray(parsed) && !JSON.stringify(parsed).includes('Siti Rahmawati') && !JSON.stringify(parsed).includes('SPD/142')) {
+          spdData = parsed;
+        }
+      } catch (e) {}
+    }
+
     return {
       success: false,
       source: 'Local-Fallback',
       kgb: cachedKgb ? JSON.parse(cachedKgb) : initialRiwayatKgb,
-      suratTugas: cachedSt ? JSON.parse(cachedSt) : initialSuratTugas,
-      spd: cachedSpd ? JSON.parse(cachedSpd) : initialSpd
+      suratTugas: stData,
+      spd: spdData
     };
   } catch (e) {
     return {
       success: false,
       source: 'Initial-Real-Data',
       kgb: initialRiwayatKgb,
-      suratTugas: initialSuratTugas,
-      spd: initialSpd
+      suratTugas: [],
+      spd: []
     };
   }
 }

@@ -212,12 +212,8 @@ export default function App() {
       if (resApeg.kgb && resApeg.kgb.length > 0) {
         setRiwayatKgbList(resApeg.kgb);
       }
-      if (resApeg.suratTugas && resApeg.suratTugas.length > 0) {
-        setSuratTugasList(resApeg.suratTugas);
-      }
-      if (resApeg.spd && resApeg.spd.length > 0) {
-        setSpdList(resApeg.spd);
-      }
+      setSuratTugasList(resApeg.suratTugas || []);
+      setSpdList(resApeg.spd || []);
 
       // 3. Cek koneksi register naskah dinas KlikSurat
       const resSurat = await checkKlikSuratConnection();
@@ -244,6 +240,16 @@ export default function App() {
   };
 
   useEffect(() => {
+    try {
+      ['klikapeg_db_cache_spd', 'klikapeg_db_cache_st', 'klikapeg_spd_list', 'klikapeg_surat_tugas_list'].forEach(key => {
+        const item = localStorage.getItem(key);
+        if (item && (item.includes('Siti Rahmawati') || item.includes('SPD/142') || item.includes('ST/304') || item.includes('Muhammad Syaifuddin') || item.includes('ST-2026') || item.includes('SPD-2026') || item.includes('ST-001') || item.includes('SPD-001'))) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      // ignore
+    }
     loadDataFromKlikCuti(false);
   }, []);
 
