@@ -10,7 +10,7 @@ export default function Sidebar({
   setIsOpen
 }) {
   const navItems = [
-    { id: 'dashboard', label: 'Beranda', icon: 'dashboard', desc: 'Ringkasan & Pengingat' },
+    { id: 'dashboard', label: 'Beranda', icon: 'dashboard', desc: 'Otomatisasi Administrasi Pegawai' },
     { id: 'pegawai', label: 'Data Pegawai', icon: 'group', desc: 'Pangkalan Data KlikCuti' },
     { id: 'kgb', label: 'Layanan KGB', icon: 'payments', desc: 'Jadwal & Cetak SK KGB' },
     { id: 'surat-tugas', label: 'Surat Tugas', icon: 'assignment', desc: 'Penugasan Kedinasan' },
@@ -137,15 +137,15 @@ export default function Sidebar({
           </nav>
 
           {/* Status Koneksi Database Eksternal (KlikSurat & KlikCuti) */}
-          <div className="pt-4 mt-2 border-t border-[#B8870A]/50 space-y-2">
-            <p className="px-3 text-[10px] font-extrabold text-[#041534]/70 uppercase tracking-wider mb-2">
+          <div className="pt-3 mt-1 border-t border-[#B8870A]/50 space-y-2">
+            <p className="px-3 text-[10px] font-extrabold text-[#041534]/70 uppercase tracking-wider mb-1">
               Koneksi Database Terintegrasi
             </p>
 
             {/* Tombol / Badge Database KlikSurat */}
             <div
               title="Database KlikSurat: Terhubung untuk Penomoran Otomatis & Registrasi Naskah Online"
-              className="w-full flex items-center justify-between p-3 rounded-2xl bg-[#041534] text-white shadow-md border border-sky-400/40 hover:border-sky-400/70 transition-all"
+              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-[#041534] text-white shadow-sm border border-sky-400/40 hover:border-sky-400/70 transition-all"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className="w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.9)] flex-shrink-0" />
@@ -153,7 +153,7 @@ export default function Sidebar({
                   <p className="font-display font-bold text-xs text-white leading-tight truncate">
                     Database KlikSurat
                   </p>
-                  <p className="text-[10px] text-sky-300 font-medium truncate mt-0.5">
+                  <p className="text-[10px] text-sky-300 font-medium truncate">
                     Register Naskah Online
                   </p>
                 </div>
@@ -168,7 +168,7 @@ export default function Sidebar({
             <button
               onClick={onSync}
               title="Klik untuk menyinkronkan data aparatur dari Database KlikCuti"
-              className="w-full flex items-center justify-between p-3 rounded-2xl bg-[#041534] hover:bg-[#082252] text-white shadow-md border border-emerald-500/40 hover:border-emerald-400 transition-all active:scale-95 group text-left cursor-pointer"
+              className="w-full flex items-center justify-between p-2.5 rounded-xl bg-[#041534] hover:bg-[#082252] text-white shadow-sm border border-emerald-500/40 hover:border-emerald-400 transition-all active:scale-95 group text-left cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <span
@@ -182,15 +182,15 @@ export default function Sidebar({
                   <p className="font-display font-bold text-xs text-white leading-tight truncate">
                     Database KlikCuti
                   </p>
-                  <p className="text-[10px] text-emerald-300 font-medium truncate mt-0.5">
+                  <p className="text-[10px] text-emerald-300 font-medium truncate">
                     {syncStatus === 'syncing' ? 'Menyinkronkan...' : 'Terhubung Real-Time'}
                   </p>
                 </div>
               </div>
 
-              <div className="w-7 h-7 rounded-lg bg-white/10 group-hover:bg-white/20 flex items-center justify-center flex-shrink-0 transition-colors">
+              <div className="w-6 h-6 rounded-lg bg-white/10 group-hover:bg-white/20 flex items-center justify-center flex-shrink-0 transition-colors">
                 <span
-                  className={`material-symbols-outlined text-[17px] text-emerald-300 ${
+                  className={`material-symbols-outlined text-[16px] text-emerald-300 ${
                     syncStatus === 'syncing' ? 'animate-spin text-amber-300' : ''
                   }`}
                 >

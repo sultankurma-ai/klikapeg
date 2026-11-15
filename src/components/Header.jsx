@@ -10,7 +10,7 @@ export default function Header({
   onNavigate
 }) {
   const pageTitles = {
-    'dashboard': { title: 'Beranda Kepegawaian', subtitle: 'Ringkasan & Pengingat KGB Aparatur' },
+    'dashboard': { title: 'Beranda Kepegawaian', subtitle: 'Otomatisasi Administrasi Pegawai' },
     'pegawai': { title: 'Data Pegawai', subtitle: 'Pangkalan Data Aparatur Terintegrasi KlikCuti' },
     'kgb': { title: 'Layanan Kenaikan Gaji Berkala (KGB)', subtitle: 'Kontrol Jadwal & Penerbitan SK KGB Resmi' },
     'surat-tugas': { title: 'Surat Tugas Kedinasan', subtitle: 'Formulir Penugasan & Penomoran Resmi PA Lumajang' },
