@@ -6,7 +6,7 @@
 import { KLIKCUTI_CONFIG, fetchSupabaseRest } from './dbConfig';
 import { initialPegawai } from '../data/mockData';
 
-const STORAGE_KEY = 'klikapeg_pegawai_live_cache';
+const STORAGE_KEY = 'klikapeg_master_kgb_v2';
 
 export function mapGolonganToPangkat(golongan) {
   const g = String(golongan || '').trim().toUpperCase();
@@ -188,14 +188,14 @@ export async function fetchPegawaiFromKlikCuti() {
       let statusKgb;
 
       if (kgbMaster && kgbMaster.tgl_kgb_berikutnya) {
-        tmtKgbTerakhir = kgbMaster.tgl_kgb_terakhir || '01-01-2025';
+        tmtKgbTerakhir = kgbMaster.tgl_kgb_terakhir || '-';
         tmtKgbBerikutnya = kgbMaster.tgl_kgb_berikutnya;
         statusKgb = evaluateKgbStatus(tmtKgbBerikutnya, idx);
       } else {
-        const fallback = deriveKgbSchedule(mkgTahun, idx);
-        tmtKgbTerakhir = fallback.tmtKgbTerakhir;
-        tmtKgbBerikutnya = fallback.tmtKgbBerikutnya;
-        statusKgb = fallback.statusKgb;
+        // Jangan mengarang data untuk pegawai yang belum terdata di Master KGB KlikCuti
+        tmtKgbTerakhir = '-';
+        tmtKgbBerikutnya = '-';
+        statusKgb = 'Belum Ada Data Master KGB';
       }
 
       const gajiLama = hitungGajiPokok(p.golongan, mkgTahun);
@@ -282,6 +282,22 @@ export async function checkKlikCutiConnection() {
       connected: false,
       message: `Offline / timeout: ${err.message}`
     };
+  }
+}
+
+/**
+ * Ambil data tabel master_kgb langsung dari Database KlikCuti
+ */
+export async function fetchMasterKgbFromKlikCuti() {
+  try {
+    const rawMasterKgb = await fetchSupabaseRest(
+      KLIKCUTI_CONFIG,
+      'master_kgb?select=*&order=nama_pegawai.asc'
+    );
+    return Array.isArray(rawMasterKgb) ? rawMasterKgb : [];
+  } catch (err) {
+    console.error('Error fetching master_kgb:', err);
+    return [];
   }
 }
 

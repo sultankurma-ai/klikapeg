@@ -9,17 +9,19 @@ export default function DashboardView({
   onSync,
   syncStatus
 }) {
-  const [kgbFilter, setKgbFilter] = useState('all'); // all | tempo | segera
+  const [kgbFilter, setKgbFilter] = useState('all'); // all | 2027 | 2028
 
-  // Filter KGB due this/next month
-  const kgbReminderList = pegawaiList.filter(p => {
-    if (kgbFilter === 'tempo') return p.statusKgb === 'Jatuh Tempo';
-    if (kgbFilter === 'segera') return p.statusKgb === 'Segera Diproses';
-    return p.statusKgb === 'Jatuh Tempo' || p.statusKgb === 'Segera Diproses';
+  // Hanya ambil aparatur yang resmi tercatat di tabel master_kgb Database KlikCuti (23 data resmi)
+  const masterKgbList = (pegawaiList || []).filter(p => p.hasMasterKgb);
+  const totalMasterKgb = masterKgbList.length;
+  const count2027 = masterKgbList.filter(p => (p.tmtKgbBerikutnya || '').includes('2027')).length;
+  const count2028 = masterKgbList.filter(p => (p.tmtKgbBerikutnya || '').includes('2028')).length;
+
+  const kgbReminderList = masterKgbList.filter(p => {
+    if (kgbFilter === '2027') return (p.tmtKgbBerikutnya || '').includes('2027');
+    if (kgbFilter === '2028') return (p.tmtKgbBerikutnya || '').includes('2028');
+    return true;
   });
-
-  const totalJatuhTempo = pegawaiList.filter(p => p.statusKgb === 'Jatuh Tempo').length;
-  const totalSegera = pegawaiList.filter(p => p.statusKgb === 'Segera Diproses').length;
 
   const formatRupiah = (val) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -87,25 +89,25 @@ export default function DashboardView({
           </div>
         </div>
 
-        {/* Card 2: KGB Bulan Ini */}
+        {/* Card 2: Master Data KGB KlikCuti */}
         <div
           onClick={() => onNavigate('kgb')}
           className="p-5 rounded-2xl bg-surface-container-lowest border border-secondary-container/60 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 w-2 h-full bg-secondary-container"></div>
+          <div className="absolute top-0 right-0 w-2 h-full bg-[#E1AD01]"></div>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-secondary uppercase tracking-wider">Jadwal KGB Bulan Ini</span>
-            <div className="w-10 h-10 rounded-xl bg-secondary-fixed/50 text-secondary flex items-center justify-center group-hover:scale-110 transition-transform">
+            <span className="text-xs font-bold text-outline uppercase tracking-wider">Master Data KGB</span>
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center group-hover:scale-110 transition-transform">
               <span className="material-symbols-outlined text-[22px]">payments</span>
             </div>
           </div>
           <div className="mt-3">
-            <span className="font-display font-extrabold text-3xl text-primary">{totalJatuhTempo}</span>
-            <span className="text-xs text-error font-bold ml-2">Jatuh Tempo</span>
+            <span className="font-display font-extrabold text-3xl text-primary">{totalMasterKgb}</span>
+            <span className="text-xs text-sky-800 font-bold ml-2">Aparatur Terdata</span>
           </div>
-          <div className="mt-2 flex items-center gap-1 text-xs text-amber-700 font-medium">
-            <span className="material-symbols-outlined text-[16px]">notification_important</span>
-            <span>+{totalSegera} pegawai bulan depan</span>
+          <div className="mt-2 flex items-center gap-1 text-xs text-emerald-700 font-semibold">
+            <span className="material-symbols-outlined text-[16px]">verified</span>
+            <span>{count2027} Terjadwal 2027 • {count2028} Terjadwal 2028</span>
           </div>
         </div>
 
@@ -162,12 +164,12 @@ export default function DashboardView({
                 <h2 className="font-display font-extrabold text-lg text-primary">
                   Pengingat Kenaikan Gaji Berkala (KGB)
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-error-container text-on-error-container">
-                  {totalJatuhTempo} Perlu Tindakan
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-900 border border-sky-300">
+                  {totalMasterKgb} Master Data KGB
                 </span>
               </div>
               <p className="text-xs text-outline mt-0.5">
-                Daftar otomatis pegawai Pengadilan Agama Lumajang yang memasuki siklus 2 tahunan
+                Data resmi aparatur PA Lumajang tersinkronisasi dari menu Master Data KGB KlikCuti
               </p>
             </div>
 
@@ -178,21 +180,21 @@ export default function DashboardView({
                 className={`px-3 py-1.5 rounded-lg transition-colors ${kgbFilter === 'all' ? 'bg-primary text-on-primary shadow-sm' : 'text-outline hover:text-primary'
                   }`}
               >
-                Semua ({totalJatuhTempo + totalSegera})
+                Semua ({totalMasterKgb})
               </button>
               <button
-                onClick={() => setKgbFilter('tempo')}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${kgbFilter === 'tempo' ? 'bg-primary text-on-primary shadow-sm' : 'text-outline hover:text-primary'
+                onClick={() => setKgbFilter('2027')}
+                className={`px-3 py-1.5 rounded-lg transition-colors ${kgbFilter === '2027' ? 'bg-primary text-on-primary shadow-sm' : 'text-outline hover:text-primary'
                   }`}
               >
-                Jatuh Tempo ({totalJatuhTempo})
+                Tahun 2027 ({count2027})
               </button>
               <button
-                onClick={() => setKgbFilter('segera')}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${kgbFilter === 'segera' ? 'bg-primary text-on-primary shadow-sm' : 'text-outline hover:text-primary'
+                onClick={() => setKgbFilter('2028')}
+                className={`px-3 py-1.5 rounded-lg transition-colors ${kgbFilter === '2028' ? 'bg-primary text-on-primary shadow-sm' : 'text-outline hover:text-primary'
                   }`}
               >
-                Bulan Depan ({totalSegera})
+                Tahun 2028 ({count2028})
               </button>
             </div>
           </div>
@@ -205,7 +207,6 @@ export default function DashboardView({
               </div>
             ) : (
               kgbReminderList.map((pegawai) => {
-                const isTempo = pegawai.statusKgb === 'Jatuh Tempo';
                 return (
                   <div
                     key={pegawai.id}
@@ -225,11 +226,8 @@ export default function DashboardView({
                           <h3 className="font-display font-bold text-sm text-primary">
                             {pegawai.nama}
                           </h3>
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${isTempo
-                              ? 'bg-error-container text-on-error-container border border-error/30'
-                              : 'bg-amber-100 text-amber-800 border border-amber-300'
-                            }`}>
-                            {pegawai.statusKgb}
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
+                            Tahun {pegawai.tmtKgbBerikutnya?.split('-')[2] || 'KGB'}
                           </span>
                         </div>
                         <p className="text-xs text-outline">
@@ -238,13 +236,18 @@ export default function DashboardView({
                         <p className="text-xs text-on-surface-variant font-medium mt-0.5">
                           {pegawai.jabatan}
                         </p>
+                        {pegawai.noSkTerakhir && (
+                          <p className="text-[10.5px] text-gray-500 font-mono mt-0.5">
+                            SK Terakhir: {pegawai.noSkTerakhir}
+                          </p>
+                        )}
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between md:justify-end gap-6 pt-2 md:pt-0 border-t md:border-t-0 border-outline-variant/40">
                       <div className="text-left md:text-right">
-                        <p className="text-[11px] text-outline font-medium">TMT KGB Baru</p>
-                        <p className="text-xs font-bold text-primary">{pegawai.tmtKgbBerikutnya}</p>
+                        <p className="text-[11px] text-outline font-medium">TMT KGB Berikutnya</p>
+                        <p className="text-xs font-bold text-primary font-mono">{pegawai.tmtKgbBerikutnya}</p>
                         <p className="text-[11px] text-emerald-700 font-semibold mt-0.5">
                           {formatRupiah(pegawai.gajiPokokBaru)}
                         </p>

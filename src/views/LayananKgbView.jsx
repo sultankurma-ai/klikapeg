@@ -10,8 +10,14 @@ export default function LayananKgbView({
   onSaveKgb,
   onNavigate
 }) {
-  const [selectedPegawai, setSelectedPegawai] = useState(selectedPegawaiFromProps || pegawaiList[0]);
-  const [filterStatus, setFilterStatus] = useState('ALL');
+  // Hanya ambil aparatur yang resmi tercatat di tabel master_kgb Database KlikCuti (23 data resmi)
+  const masterKgbList = (pegawaiList || []).filter(p => p.hasMasterKgb);
+  const displayedKgbList = masterKgbList.length > 0 ? masterKgbList : (pegawaiList || []);
+
+  const [selectedPegawai, setSelectedPegawai] = useState(
+    selectedPegawaiFromProps || displayedKgbList[0] || (pegawaiList && pegawaiList[0])
+  );
+  const [filterYear, setFilterYear] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Form State
@@ -35,12 +41,12 @@ export default function LayananKgbView({
     }
   }, [selectedPegawaiFromProps]);
 
-  // Update aparatur pertama jika data pegawai dari KlikCuti selesai dimuat
+  // Update aparatur pertama jika data Master KGB dari KlikCuti selesai dimuat
   useEffect(() => {
-    if (pegawaiList && pegawaiList.length > 0 && !selectedPegawaiFromProps) {
-      const matchCurrent = pegawaiList.some(p => p.id === selectedPegawai?.id);
+    if (displayedKgbList && displayedKgbList.length > 0 && !selectedPegawaiFromProps) {
+      const matchCurrent = displayedKgbList.some(p => p.id === selectedPegawai?.id);
       if (!matchCurrent) {
-        handleSelectPegawai(pegawaiList[0]);
+        handleSelectPegawai(displayedKgbList[0]);
       }
     }
   }, [pegawaiList]);
@@ -136,13 +142,19 @@ export default function LayananKgbView({
     setShowPreviewModal(true);
   };
 
-  const filteredList = pegawaiList.filter(p => {
-    const matchSearch = p.nama.toLowerCase().includes(searchQuery.toLowerCase()) || p.nip.includes(searchQuery);
-    if (filterStatus === 'ALL') return matchSearch;
-    if (filterStatus === 'TEMPO') return matchSearch && p.statusKgb === 'Jatuh Tempo';
-    if (filterStatus === 'SEGERA') return matchSearch && p.statusKgb === 'Segera Diproses';
+  const filteredList = displayedKgbList.filter(p => {
+    const matchSearch =
+      (p.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.nip || '').includes(searchQuery);
+
+    if (filterYear === 'ALL') return matchSearch;
+    if (filterYear === '2027') return matchSearch && (p.tmtKgbBerikutnya || '').includes('2027');
+    if (filterYear === '2028') return matchSearch && (p.tmtKgbBerikutnya || '').includes('2028');
     return matchSearch;
   });
+
+  const total2027 = displayedKgbList.filter(p => (p.tmtKgbBerikutnya || '').includes('2027')).length;
+  const total2028 = displayedKgbList.filter(p => (p.tmtKgbBerikutnya || '').includes('2028')).length;
 
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
@@ -178,8 +190,8 @@ export default function LayananKgbView({
             <h2 className="font-display font-bold text-base text-primary">
               Tabel Kontrol Jadwal KGB
             </h2>
-            <span className="text-xs font-semibold text-outline">
-              {filteredList.length} Aparatur
+            <span className="text-[11px] font-bold text-sky-900 bg-sky-100 border border-sky-300 px-2.5 py-0.5 rounded-full shadow-2xs">
+              {filteredList.length} Master Data KGB
             </span>
           </div>
 
@@ -191,28 +203,28 @@ export default function LayananKgbView({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari nama atau NIP..."
+                placeholder="Cari nama aparatur atau NIP di Master KGB..."
                 className="w-full pl-9 pr-3 py-2 rounded-xl border border-outline-variant text-xs bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div className="flex gap-1.5 text-[11px] font-semibold">
               <button
-                onClick={() => setFilterStatus('ALL')}
-                className={`px-2.5 py-1 rounded-lg transition-colors ${filterStatus === 'ALL' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-outline'}`}
+                onClick={() => setFilterYear('ALL')}
+                className={`px-2.5 py-1 rounded-lg transition-colors ${filterYear === 'ALL' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-outline'}`}
               >
-                Semua
+                Semua ({displayedKgbList.length})
               </button>
               <button
-                onClick={() => setFilterStatus('TEMPO')}
-                className={`px-2.5 py-1 rounded-lg transition-colors ${filterStatus === 'TEMPO' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-outline'}`}
+                onClick={() => setFilterYear('2027')}
+                className={`px-2.5 py-1 rounded-lg transition-colors ${filterYear === '2027' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-outline'}`}
               >
-                Jatuh Tempo
+                Tahun 2027 ({total2027})
               </button>
               <button
-                onClick={() => setFilterStatus('SEGERA')}
-                className={`px-2.5 py-1 rounded-lg transition-colors ${filterStatus === 'SEGERA' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-outline'}`}
+                onClick={() => setFilterYear('2028')}
+                className={`px-2.5 py-1 rounded-lg transition-colors ${filterYear === '2028' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-outline'}`}
               >
-                Bulan Depan
+                Tahun 2028 ({total2028})
               </button>
             </div>
           </div>
@@ -221,45 +233,52 @@ export default function LayananKgbView({
           <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
             {filteredList.map((pegawai) => {
               const isSelected = selectedPegawai?.id === pegawai.id;
-              const isTempo = pegawai.statusKgb === 'Jatuh Tempo';
 
               return (
                 <div
                   key={pegawai.id}
                   onClick={() => handleSelectPegawai(pegawai)}
-                  className={`p-3 rounded-2xl border transition-all cursor-pointer ${isSelected
-                      ? 'bg-primary-fixed/20 border-primary shadow-sm'
+                  className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary-fixed/20 border-primary shadow-sm ring-1 ring-primary'
                       : 'bg-surface-container-low border-outline-variant/40 hover:border-primary/40'
-                    }`}
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <img
                         src={pegawai.foto}
                         alt={pegawai.nama}
-                        className="w-9 h-9 rounded-xl object-cover ring-1 ring-outline-variant"
+                        className="w-9 h-9 rounded-xl object-cover ring-1 ring-outline-variant shrink-0"
                         onError={(e) => {
                           e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(pegawai.nama) + '&background=1B2A4A&color=fff';
                         }}
                       />
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-bold text-xs text-primary leading-tight line-clamp-1">
                           {pegawai.nama}
                         </p>
-                        <p className="text-[11px] text-outline font-mono">
-                          {pegawai.golongan} • NIP. {pegawai.nip.slice(0, 10)}...
+                        <p className="text-[11px] text-outline font-mono truncate">
+                          {pegawai.golongan} • NIP. {pegawai.nip}
                         </p>
+                        {pegawai.noSkTerakhir && (
+                          <p className="text-[10px] text-gray-500 font-mono truncate mt-0.5" title={pegawai.noSkTerakhir}>
+                            SK: {pegawai.noSkTerakhir}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isTempo ? 'bg-error-container text-on-error-container' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                      {pegawai.statusKgb}
+
+                    <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-sky-100 text-sky-800 border border-sky-200 shrink-0">
+                      Tahun {pegawai.tmtKgbBerikutnya?.split('-')[2] || 'KGB'}
                     </span>
                   </div>
 
                   <div className="mt-2 pt-2 border-t border-outline-variant/30 flex items-center justify-between text-[11px]">
-                    <span className="text-outline">TMT: <strong className="text-primary">{pegawai.tmtKgbBerikutnya}</strong></span>
-                    <span className="text-secondary font-bold">{formatRupiah(pegawai.gajiPokokBaru)}</span>
+                    <span className="text-outline">
+                      TMT Berikutnya: <strong className="text-primary font-mono">{pegawai.tmtKgbBerikutnya}</strong>
+                    </span>
+                    <span className="text-emerald-800 font-bold">{formatRupiah(pegawai.gajiPokokBaru)}</span>
                   </div>
                 </div>
               );
@@ -294,18 +313,26 @@ export default function LayananKgbView({
                   e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(selectedPegawai.nama) + '&background=1B2A4A&color=fff';
                 }}
               />
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-2 py-0.5 rounded bg-primary text-on-primary text-[10px] font-bold">
                     {selectedPegawai.golongan}
                   </span>
                   <span className="text-xs text-outline font-semibold">{selectedPegawai.pangkat}</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-300">
+                    Master Data KGB
+                  </span>
                 </div>
                 <h3 className="font-display font-bold text-sm text-primary mt-1">
                   {selectedPegawai.nama}
                 </h3>
                 <p className="text-xs text-outline font-mono">NIP. {selectedPegawai.nip}</p>
                 <p className="text-xs text-on-surface-variant font-medium mt-0.5">{selectedPegawai.jabatan}</p>
+                {selectedPegawai.noSkTerakhir && selectedPegawai.noSkTerakhir !== '-' && (
+                  <p className="text-[11px] text-emerald-800 font-mono mt-1 font-semibold truncate">
+                    SK Terakhir: {selectedPegawai.noSkTerakhir} (TMT: {selectedPegawai.tmtKgbTerakhir})
+                  </p>
+                )}
               </div>
             </div>
           )}
