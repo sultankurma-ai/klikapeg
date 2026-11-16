@@ -638,23 +638,13 @@ export default function SuratTugasView({
 
       {/* Modal Format Resmi Cetak Surat Tugas Sesuai form-ST.docx */}
       {showPreviewModal && activeDocForPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white text-black rounded-2xl max-w-3xl w-full p-8 shadow-2xl relative my-8 print:p-0 print:m-0 print:shadow-none print:max-w-none">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start">
+          <div className="bg-white text-black rounded-2xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative my-4 sm:my-6 print:p-0 print:m-0 print:shadow-none print:max-w-none">
             {/* Modal Controls (Hidden in Print) */}
-            <div className="no-print sticky top-0 bg-white/95 backdrop-blur z-20 flex flex-wrap items-center justify-between pb-4 mb-6 border-b border-gray-200 gap-3">
+            <div className="no-print sticky top-0 bg-white/95 backdrop-blur z-20 flex flex-wrap items-center justify-between pb-3.5 mb-5 border-b border-gray-200 gap-3">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowPreviewModal(false)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-colors shadow-sm"
-                  title="Kembali ke Halaman Surat Tugas"
-                >
-                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                  <span>Kembali</span>
-                </button>
-                <div className="flex items-center gap-2 ml-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-secondary"></span>
-                  <span className="font-bold text-xs sm:text-sm text-gray-800">Pratinjau Surat Tugas (Format form-ST)</span>
-                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+                <span className="font-bold text-xs sm:text-sm text-gray-800">Pratinjau Surat Tugas (Format form-ST)</span>
               </div>
               <div className="flex items-center gap-2">
                 <button

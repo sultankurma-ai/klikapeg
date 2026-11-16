@@ -1422,32 +1422,29 @@ export default function LayananKgbView({
       {/* MODAL PRATINJAU DOKUMEN RESMI KGB PNS SESUAI SURAT EDARAN MAHKAMAH AGUNG  */}
       {/* ========================================================================= */}
       {showPreviewModal && activeDocForPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto animate-fadeIn">
-          <div className="bg-white text-black rounded-2xl max-w-4xl w-full p-8 sm:p-10 shadow-2xl relative my-8 print:p-0 print:m-0 print:shadow-none print:max-w-none">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm p-3 sm:p-6 flex justify-center items-start animate-fadeIn">
+          <div className="bg-white text-black rounded-2xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl relative my-4 sm:my-6 print:p-0 print:m-0 print:shadow-none print:max-w-none">
             {/* Modal Controls (Hidden in Print) */}
-            <div className="no-print sticky top-0 bg-white/95 backdrop-blur z-20 flex flex-col md:flex-row md:items-center justify-between pb-4 mb-6 border-b border-gray-200 gap-3">
+            <div className="no-print sticky top-0 bg-white/95 backdrop-blur z-20 flex flex-wrap items-center justify-between pb-3.5 mb-5 border-b border-gray-200 gap-3">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowPreviewModal(false)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold transition-colors shadow-sm"
-                  title="Kembali ke Halaman Layanan KGB"
-                >
-                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                  <span>Kembali</span>
-                </button>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200">
-                  <span className="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
-                  <span>Format Resmi Standar Mahkamah Agung RI</span>
-                </span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                <span className="font-bold text-xs sm:text-sm text-gray-800">Pratinjau SK KGB PNS (Format Standar Mahkamah Agung RI)</span>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all shadow-md hover:shadow-lg"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[18px] text-amber-300">print</span>
                   <span>Cetak Dokumen Resmi</span>
+                </button>
+                <button
+                  onClick={() => setShowPreviewModal(false)}
+                  className="p-2 rounded-xl text-gray-500 hover:text-black hover:bg-gray-100 transition-colors"
+                  title="Tutup Pratinjau"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
                 </button>
               </div>
             </div>
@@ -1648,6 +1645,24 @@ export default function LayananKgbView({
                   <li>Pegawai yang bersangkutan;</li>
                   <li>Pertinggal / Arsip Kepegawaian.</li>
                 </ol>
+              </div>
+
+              {/* Bottom Action Bar (Hidden in Print) */}
+              <div className="no-print pt-6 mt-6 border-t border-gray-300 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  onClick={() => setShowPreviewModal(false)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 bg-gray-50 text-gray-700 text-xs font-bold hover:bg-gray-100 hover:text-black transition-colors shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                  <span>Kembali ke Halaman Layanan KGB</span>
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all shadow-md hover:shadow-lg"
+                >
+                  <span className="material-symbols-outlined text-[18px] text-amber-300">print</span>
+                  <span>Cetak Dokumen Resmi (Print / PDF)</span>
+                </button>
               </div>
             </div>
           </div>
