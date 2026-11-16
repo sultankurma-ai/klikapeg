@@ -1630,7 +1630,7 @@ export default function LayananKgbView({
 
               {/* Paragraf Penutup Surat */}
               <p className="text-justify pt-1">
-                Diharapkan agar kepada pegawai yang bersangkutan dapat dibayarkan penghasilannya berdasarkan gaji pokoknya yang baru.
+                Diharapkan agar sesuai dengan Peraturan Pemerintah RI Nomor 5 Tahun 2024 kepada pegawai tersebut dapat dibayarkan penghasilan berdasarkan gaji pokok yang baru.
               </p>
 
               {/* Blok Tanda Tangan Ketua PA Lumajang */}
