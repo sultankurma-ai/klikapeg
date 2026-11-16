@@ -139,7 +139,7 @@ export default function DataPegawaiView({
               <option value="IV">Golongan IV (Pembina)</option>
               <option value="III">Golongan III (Penata)</option>
               <option value="II">Golongan II (Pengatur)</option>
-              <option value="PPPK">PPPK (Golongan IX)</option>
+              <option value="PPPK">PPPK (Golongan V & IX)</option>
             </select>
           </div>
 

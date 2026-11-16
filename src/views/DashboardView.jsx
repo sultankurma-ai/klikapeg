@@ -359,14 +359,19 @@ export default function DashboardView({
           </div>
 
           {/* Card Info Kepegawaian */}
-          <div className="p-5 rounded-3xl bg-primary-container text-on-primary border border-secondary-container/30 shadow-md">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="p-5 rounded-3xl bg-primary-container text-on-primary border border-secondary-container/30 shadow-md space-y-2">
+            <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-secondary-container">verified_user</span>
-              <span className="font-display font-bold text-sm">Ketentuan KGB Mandiri</span>
+              <span className="font-display font-bold text-sm">Kewenangan KGB PA Lumajang</span>
             </div>
-            <p className="text-xs text-primary-fixed-dim leading-relaxed">
-              Berdasarkan PP No. 5 Tahun 2024 dan SE Mahkamah Agung RI, penerbitan SK KGB dilakukan tiap 2 tahun bagi pegawai yang telah memenuhi syarat nilai SKP minimal baik.
-            </p>
+            <div className="text-[11px] text-primary-fixed-dim leading-relaxed space-y-1.5">
+              <p>
+                • <strong>KGB PNS (23 Orang):</strong> Surat KGB dibuat dan diterbitkan langsung oleh Ketua Pengadilan Agama Lumajang Kelas 1A (PP No. 5/2024).
+              </p>
+              <p>
+                • <strong>KGB PPPK (12 Orang):</strong> Surat KGB diterbitkan terpusat oleh Mahkamah Agung RI. Satker PA Lumajang hanya bertugas memonitor dan kontrol jadwal (PermenPAN-RB 7/2023).
+              </p>
+            </div>
           </div>
         </div>
       </div>

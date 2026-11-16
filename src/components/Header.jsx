@@ -12,7 +12,7 @@ export default function Header({
   const pageTitles = {
     'dashboard': { title: 'Beranda Kepegawaian', subtitle: 'Otomatisasi Administrasi Pegawai' },
     'pegawai': { title: 'Data Pegawai', subtitle: 'Pangkalan Data Aparatur Terintegrasi KlikCuti' },
-    'kgb': { title: 'Layanan Kenaikan Gaji Berkala (KGB)', subtitle: 'Kontrol Jadwal & Penerbitan SK KGB Resmi' },
+    'kgb': { title: 'Layanan Kenaikan Gaji Berkala (KGB)', subtitle: 'PNS (Diterbitkan PA Lumajang) & PPPK (Kontrol Mahkamah Agung RI)' },
     'surat-tugas': { title: 'Surat Tugas Kedinasan', subtitle: 'Formulir Penugasan & Penomoran Resmi PA Lumajang' },
     'spd': { title: 'Surat Perjalanan Dinas (SPD)', subtitle: 'Penerbitan Lembar SPD Terhubung Surat Tugas' },
     'akun': { title: 'Pengaturan Akun Pengelola', subtitle: 'Manajemen Hak Akses, Kredensial & Sistem CRUD Aparatur' }
