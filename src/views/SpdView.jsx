@@ -14,7 +14,7 @@ export default function SpdView({
   const [selectedStId, setSelectedStId] = useState(selectedStForSpd ? selectedStForSpd.id : '');
   const [nomorSpd, setNomorSpd] = useState('SPD/143/PA.Lmj/XI/2026');
   const [ppk, setPpk] = useState('Dr. Rozy Alifian Mukhtar S.H., M.Kn. (Pejabat Pembuat Komitmen PA Lumajang)');
-  const [selectedPegawaiId, setSelectedPegawaiId] = useState('PEG-005');
+  const [selectedPegawaiId, setSelectedPegawaiId] = useState('');
   const [tingkatBiaya, setTingkatBiaya] = useState('Tingkat C');
   const [maksudPerjalanan, setMaksudPerjalanan] = useState('Melaksanakan tugas kedinasan sesuai Surat Tugas pada Lingkungan Pengadilan Tinggi Agama Surabaya');
   const [alatAngkut, setAlatAngkut] = useState('Angkutan Darat');
@@ -226,10 +226,12 @@ export default function SpdView({
                 Aparatur yang Diperintahkan Bepergian
               </label>
               <select
+                required
                 value={selectedPegawaiId}
                 onChange={(e) => setSelectedPegawaiId(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant text-xs font-semibold text-primary bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none"
               >
+                <option value="">-- Pilih Aparatur yang Ditugaskan --</option>
                 {pegawaiList.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.nama} ({p.golongan} - {p.jabatan})

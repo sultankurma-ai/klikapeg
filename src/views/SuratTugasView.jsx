@@ -10,15 +10,10 @@ export default function SuratTugasView({
   onCreateSpdFromSt,
   onNavigate
 }) {
-  // Form State
-  const [nomorSurat, setNomorSurat] = useState('1893/KPA.W13-A8/ST.KP7.1/IX/2026');
-  const [tanggalSurat, setTanggalSurat] = useState('14-11-2026');
-  const [selectedPegawaiIds, setSelectedPegawaiIds] = useState(() => {
-    if (pegawaiList && pegawaiList.length >= 2) {
-      return [pegawaiList[0].id, pegawaiList[1].id];
-    }
-    return ['PEG-004', 'PEG-005'];
-  });
+  // Form State: Formulir Kosong Awal
+  const [nomorSurat, setNomorSurat] = useState('1894/KPA.W13-A8/ST.KP7.1/XI/2026');
+  const [tanggalSurat, setTanggalSurat] = useState('16-11-2026');
+  const [selectedPegawaiIds, setSelectedPegawaiIds] = useState([]);
   const [maksudTugas, setMaksudTugas] = useState('Menghadiri Pembinaan dan Rapat Koordinasi Perencanaan Anggaran di Lingkungan Pengadilan Tinggi Agama Surabaya');
   const [dasarHukum, setDasarHukum] = useState('Surat Ketua Pengadilan Tinggi Agama Surabaya Nomor: 6385/KPTA.W13-A/DL1/XI/2026 Tanggal 06 November 2026 tentang Undangan');
   const [tempatTujuan, setTempatTujuan] = useState('aula PTA Surabaya, Jl. Mayjend Sungkono No. 7 Surabaya');
@@ -47,16 +42,6 @@ export default function SuratTugasView({
       }
     }).catch(() => {});
   }, []);
-
-  // Update aparatur awal jika data pegawai dari KlikCuti diperbarui
-  useEffect(() => {
-    if (pegawaiList && pegawaiList.length > 0) {
-      const anyMatch = selectedPegawaiIds.some(id => pegawaiList.some(p => p.id === id));
-      if (!anyMatch && pegawaiList.length >= 2) {
-        setSelectedPegawaiIds([pegawaiList[0].id, pegawaiList[1].id]);
-      }
-    }
-  }, [pegawaiList]);
 
   const handleAmbilNomorKlikSurat = async () => {
     setIsSyncingKlikSurat(true);
@@ -106,17 +91,14 @@ export default function SuratTugasView({
   };
 
   const handleRemovePegawai = (pegId) => {
-    if (selectedPegawaiIds.length <= 1) {
-      setNipError('Minimal harus ada 1 aparatur yang ditugaskan dalam surat tugas.');
-      setTimeout(() => setNipError(''), 3000);
-      return;
-    }
     setSelectedPegawaiIds(selectedPegawaiIds.filter(id => id !== pegId));
+    setNipError('');
   };
 
   const getAssignedPegawaiObjects = () => {
-    return pegawaiList
-      .filter(p => selectedPegawaiIds.includes(p.id))
+    return selectedPegawaiIds
+      .map(id => pegawaiList.find(p => p.id === id))
+      .filter(Boolean)
       .map(p => ({
         id: p.id,
         nama: p.nama,
@@ -130,6 +112,10 @@ export default function SuratTugasView({
   const handleSubmit = (e) => {
     e.preventDefault();
     const assigned = getAssignedPegawaiObjects();
+    if (assigned.length === 0) {
+      setNipError('Silakan tambahkan minimal 1 aparatur yang ditugaskan terlebih dahulu.');
+      return;
+    }
     const newSt = {
       id: 'ST-' + Date.now(),
       nomorSurat,
@@ -349,9 +335,12 @@ export default function SuratTugasView({
               {/* Tabel Aparatur yang Ditugaskan */}
               <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container-lowest shadow-sm">
                 {getAssignedPegawaiObjects().length === 0 ? (
-                  <div className="p-6 text-center text-outline text-xs">
-                    <span className="material-symbols-outlined text-3xl mb-1 text-outline/60 block">group_off</span>
-                    Belum ada aparatur yang ditugaskan. Masukkan NIP lalu klik <strong>Tambah Pegawai</strong>.
+                  <div className="p-8 text-center text-outline text-xs bg-surface-container-low/40">
+                    <span className="material-symbols-outlined text-3xl mb-1 text-outline/60 block">group_add</span>
+                    <p className="font-semibold text-primary">Belum ada aparatur yang ditugaskan</p>
+                    <p className="text-[11px] text-outline mt-0.5">
+                      Silakan pilih nama atau masukkan NIP aparatur pada kolom di atas, lalu klik tombol <strong>Tambah Pegawai</strong>.
+                    </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
