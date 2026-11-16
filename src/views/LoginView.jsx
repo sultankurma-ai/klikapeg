@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 
 export default function LoginView({ onLogin }) {
-  const [nip, setNip] = useState('197011061994032004'); // Mas Khabibah Nur, S.H.
-  const [password, setPassword] = useState('lumajang2026');
+  const [nip, setNip] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotInput, setForgotInput] = useState('');
@@ -16,10 +16,14 @@ export default function LoginView({ onLogin }) {
       setErrorMsg('Silakan masukkan Username atau NIP terdaftar');
       return;
     }
+    if (!password.trim()) {
+      setErrorMsg('Silakan masukkan Kata Sandi Anda');
+      return;
+    }
     setErrorMsg('');
     const isPimpinan = nip === '197603031998031002' || nip.toLowerCase() === 'ketua' || nip === '198109142006041002';
     onLogin({
-      nip: nip,
+      nip: nip.trim(),
       nama: isPimpinan ? 'Fatkur Rosyad, S.Ag., M.H., M.HES.' : 'Mas Khabibah Nur, S.H.',
       role: isPimpinan ? 'Pimpinan Pengadilan' : 'Admin Kepegawaian',
       jabatan: isPimpinan ? 'Ketua Pengadilan Agama Lumajang' : 'Kepala Sub Bagian Kepegawaian, Organisasi dan Tata Laksana'
