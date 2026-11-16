@@ -1450,44 +1450,57 @@ export default function LayananKgbView({
             </div>
 
             {/* AREA DOKUMEN CETAK RESMI (STANDAR FORM-KGB.DOCX) */}
-            <div id="printable-kgb-doc" className="font-serif text-[12.5px] leading-relaxed text-black max-w-3xl mx-auto space-y-3">
+            <div
+              id="printable-kgb-doc"
+              className="font-bookman text-[12.5px] leading-relaxed text-black max-w-3xl mx-auto space-y-3"
+              style={{ fontFamily: "'Bookman Old Style', 'Bookman', 'URW Bookman L', serif" }}
+            >
               {/* Kop Surat Resmi PA Lumajang */}
               <OfficialKopSurat />
 
-              {/* Tanggal & Tempat Terbit Surat di Sebelah Kanan Atas */}
-              <div className="flex justify-end pt-1">
-                <p className="text-xs">
-                  Lumajang, {activeDocForPreview.tanggalSk || '16 November 2026'}
-                </p>
-              </div>
+              {/* Blok Rujukan Nomor, Tanggal, & Alamat Tujuan KPPN */}
+              <div className="pt-1 text-[12px]">
+                <table className="w-full border-collapse" style={{ fontFamily: "'Bookman Old Style', 'Bookman', 'URW Bookman L', serif" }}>
+                  <tbody>
+                    {/* Baris 1: Nomor Surat sejajar dengan Tempat & Tanggal Surat */}
+                    <tr>
+                      <td className="w-16 align-top">Nomor</td>
+                      <td className="w-3 align-top">:</td>
+                      <td className="align-top font-bold w-[46%] pr-2">
+                        {activeDocForPreview.nomorSk}
+                      </td>
+                      <td className="align-top text-left pl-6">
+                        Lumajang, {activeDocForPreview.tanggalSk || '16 November 2026'}
+                      </td>
+                    </tr>
 
-              {/* Blok Alamat Surat & Tujuan KPPN */}
-              <div className="grid grid-cols-12 gap-2 text-xs pt-1">
-                <div className="col-span-7 space-y-0.5">
-                  <div className="flex">
-                    <span className="w-16">Nomor</span>
-                    <span className="w-3">:</span>
-                    <span className="font-bold font-sans text-xs">{activeDocForPreview.nomorSk}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="w-16">Lampiran</span>
-                    <span className="w-3">:</span>
-                    <span>1 (satu) Berkas</span>
-                  </div>
-                  <div className="flex">
-                    <span className="w-16">Perihal</span>
-                    <span className="w-3">:</span>
-                    <span className="font-bold underline">Kenaikan Gaji Berkala</span>
-                  </div>
-                </div>
+                    {/* Baris 2: Lampiran */}
+                    <tr>
+                      <td className="align-top">Lampiran</td>
+                      <td className="align-top">:</td>
+                      <td className="align-top pr-2">
+                        1 (satu) Berkas
+                      </td>
+                      <td className="align-top pl-6"></td>
+                    </tr>
 
-                <div className="col-span-5 text-left text-xs pl-4 space-y-0.5">
-                  <p>Kepada Yth.</p>
-                  <p className="font-bold">Kepala Kantor Pelayanan Perbendaharaan</p>
-                  <p className="font-bold">Negara (KPPN) Bondowoso</p>
-                  <p>di -</p>
-                  <p className="pl-4 font-semibold">BONDOWOSO</p>
-                </div>
+                    {/* Baris 3: Perihal sejajar dengan Kepada Yth. */}
+                    <tr>
+                      <td className="align-top">Perihal</td>
+                      <td className="align-top">:</td>
+                      <td className="align-top font-bold underline pr-2">
+                        Kenaikan Gaji Berkala
+                      </td>
+                      <td className="align-top text-left pl-6 leading-snug">
+                        <p>Kepada Yth.</p>
+                        <p className="font-bold">Kepala Kantor Pelayanan Perbendaharaan</p>
+                        <p className="font-bold">Negara (KPPN) Bondowoso</p>
+                        <p>di -</p>
+                        <p className="pl-4 font-semibold">BONDOWOSO</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
               {/* Paragraf Pembuka Surat */}

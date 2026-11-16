@@ -665,7 +665,10 @@ export default function SuratTugasView({
             </div>
 
             {/* Document Content */}
-            <div className="space-y-4 text-black text-[12px] leading-relaxed font-serif">
+            <div
+              className="space-y-4 text-black text-[12px] leading-relaxed font-bookman"
+              style={{ fontFamily: "'Bookman Old Style', 'Bookman', 'URW Bookman L', serif" }}
+            >
               {/* Kop Surat Resmi Mahkamah Agung RI */}
               <OfficialKopSurat />
 

@@ -570,7 +570,10 @@ export default function SpdView({
             </div>
 
             {/* Document Body */}
-            <div className="text-black text-[12px] leading-relaxed font-serif">
+            <div
+              className="text-black text-[12px] leading-relaxed font-bookman"
+              style={{ fontFamily: "'Bookman Old Style', 'Bookman', 'URW Bookman L', serif" }}
+            >
               {/* ================= LEMBAR 1 ================= */}
               {(activeSpdTab === 'ALL' || activeSpdTab === 'L1') && (
                 <div className="space-y-3">

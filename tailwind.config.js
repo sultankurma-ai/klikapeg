@@ -72,7 +72,8 @@ export default {
         "body-sm": ["Inter", "sans-serif"],
         "label-lg": ["Inter", "sans-serif"],
         "label-md": ["Inter", "sans-serif"],
-        "label-sm": ["Inter", "sans-serif"]
+        "label-sm": ["Inter", "sans-serif"],
+        "bookman": ["'Bookman Old Style'", "Bookman", "'URW Bookman L'", "serif"]
       }
     },
   },
