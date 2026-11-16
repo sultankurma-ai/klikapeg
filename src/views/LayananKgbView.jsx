@@ -3,6 +3,19 @@ import OfficialKopSurat from '../components/OfficialKopSurat';
 import { terbilang, formatRupiah, formatTanggalIndo } from '../utils/formatters';
 import { getNextNomorSkKgb, registerSuratKeluarToKlikSurat } from '../services/kliksuratService';
 
+/**
+ * Helper untuk menentukan apakah seorang pegawai adalah PPPK atau PNS
+ */
+export const isPppkPegawai = (p) => {
+  if (!p) return false;
+  return (
+    p.statusKepegawaian === 'PPPK' ||
+    p.golongan === 'V' ||
+    p.golongan === 'IX' ||
+    (typeof p.nip === 'string' && (p.nip.includes('202521') || p.nip.includes('202421')))
+  );
+};
+
 export default function LayananKgbView({
   pegawaiList,
   selectedPegawaiFromProps,
@@ -11,52 +24,14 @@ export default function LayananKgbView({
   onNavigate
 }) {
   // 1. Aparatur PNS (23 orang resmi tercatat di tabel master_kgb Database KlikCuti)
-  const pnsList = (pegawaiList || []).filter(p =>
-    p.hasMasterKgb || p.statusKepegawaian === 'PNS' || (!p.nip?.includes('202521') && !p.nip?.includes('202421') && p.statusKepegawaian !== 'PPPK')
-  );
+  const pnsList = (pegawaiList || [])
+    .filter(p => !isPppkPegawai(p))
+    .map(p => ({ ...p, isPppk: false }));
 
   // 2. Aparatur PPPK (12 orang resmi PA Lumajang)
-  const rawPppkList = (pegawaiList || []).filter(p =>
-    p.statusKepegawaian === 'PPPK' || p.nip?.includes('202521') || p.nip?.includes('202421')
-  );
+  const rawPppkList = (pegawaiList || []).filter(p => isPppkPegawai(p));
 
-  // Sub Menu State: 'PNS' | 'PPPK'
-  const [subTab, setSubTab] = useState(() => {
-    if (selectedPegawaiFromProps?.statusKepegawaian === 'PPPK' || selectedPegawaiFromProps?.nip?.includes('202521')) {
-      return 'PPPK';
-    }
-    return 'PNS';
-  });
-
-  // ==========================================
-  // STATE KHUSUS KGB PNS (Diterbitkan PA Lumajang)
-  // ==========================================
-  const [selectedPegawai, setSelectedPegawai] = useState(
-    selectedPegawaiFromProps && (selectedPegawaiFromProps.hasMasterKgb || selectedPegawaiFromProps.statusKepegawaian === 'PNS')
-      ? selectedPegawaiFromProps
-      : pnsList[0] || null
-  );
-  const [filterYear, setFilterYear] = useState('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Form State PNS
-  const [nomorSk, setNomorSk] = useState('452/KPA.W13-A8/KP2.1/XI/2026');
-  const [tanggalSk, setTanggalSk] = useState('14-11-2026');
-  const [tmtBaru, setTmtBaru] = useState('01-11-2026');
-  const [mkgTahun, setMkgTahun] = useState(selectedPegawai?.mkgTahun ? selectedPegawai.mkgTahun + 2 : 20);
-  const [gajiLama, setGajiLama] = useState(selectedPegawai?.gajiPokokLama || 3824500);
-  const [gajiBaru, setGajiBaru] = useState(selectedPegawai?.gajiPokokBaru || 3945300);
-  const [penandatangan, setPenandatangan] = useState('FATKUR ROSYAD (Ketua Pengadilan Agama Lumajang)');
-
-  // Modal & Toast State PNS
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [activeDocForPreview, setActiveDocForPreview] = useState(null);
-  const [successToast, setSuccessToast] = useState('');
-  const [isSyncingKlikSurat, setIsSyncingKlikSurat] = useState(false);
-
-  // ==========================================
-  // STATE KHUSUS KGB PPPK (Kontrol Mahkamah Agung)
-  // ==========================================
+  // Local storage untuk pencatatan nomor SK Mahkamah Agung untuk PPPK
   const [pppkSkRecords, setPppkSkRecords] = useState(() => {
     try {
       const saved = localStorage.getItem('klikapeg_pppk_sk_records');
@@ -65,26 +40,10 @@ export default function LayananKgbView({
     return {};
   });
 
-  const [searchPppkQuery, setSearchPppkQuery] = useState('');
-  const [filterPppkGolongan, setFilterPppkGolongan] = useState('ALL'); // 'ALL' | 'V' | 'IX'
-  const [filterPppkStatus, setFilterPppkStatus] = useState('ALL'); // 'ALL' | 'MENUNGGU' | 'SUDAH_SK'
-
-  // Modal Catat SK Mahkamah Agung untuk PPPK
-  const [showPppkModal, setShowPppkModal] = useState(false);
-  const [selectedPppkForModal, setSelectedPppkForModal] = useState(null);
-  const [pppkModalForm, setPppkModalForm] = useState({
-    noSkMa: '',
-    tanggalSkMa: '',
-    tmtSkMa: '01-02-2027',
-    tanggalDiterima: '',
-    catatan: '',
-    status: 'Menunggu Terbit MA RI'
-  });
-
-  // Mapped List PPPK dengan data kontrol
+  // Mapped List PPPK dengan data kontrol berkala (TMT Angkat 09-01-2025, Siklus KGB Pertama 01-02-2027)
   const pppkList = rawPppkList.map(p => {
     const isGol9 = p.golongan === 'IX';
-    // Standar Perpres No. 11/2024 (MK 0 Th -> MK 2 Th)
+    // Standar Perpres No. 11/2024 (MKG 0 Th -> MKG 2 Th saat KGB I)
     const gajiLama = isGol9 ? 3203600 : 2511500;
     const gajiBaru = isGol9 ? 3304500 : 2590600;
     const tmtPengangkatan = '09-01-2025';
@@ -93,6 +52,7 @@ export default function LayananKgbView({
 
     return {
       ...p,
+      isPppk: true,
       tmtPengangkatan,
       tmtKgbPertama,
       gajiPokokLama: gajiLama,
@@ -108,30 +68,88 @@ export default function LayananKgbView({
     };
   });
 
-  // Sinkronisasi pilihan pegawai dari props
+  // ==========================================
+  // STATE DAFTAR & SELEKSI PEGAWAI
+  // ==========================================
+  // 'PNS' | 'PPPK' -> memisahkan daftar kontrol KGB
+  const [activeDaftarTab, setActiveDaftarTab] = useState(() => {
+    if (selectedPegawaiFromProps && isPppkPegawai(selectedPegawaiFromProps)) {
+      return 'PPPK';
+    }
+    return 'PNS';
+  });
+
+  // Pegawai yang sedang aktif dipilih di kolom kiri
+  const [selectedPegawai, setSelectedPegawai] = useState(() => {
+    if (selectedPegawaiFromProps) {
+      if (isPppkPegawai(selectedPegawaiFromProps)) {
+        return pppkList.find(p => p.nip === selectedPegawaiFromProps.nip) || selectedPegawaiFromProps;
+      }
+      return pnsList.find(p => p.nip === selectedPegawaiFromProps.nip) || selectedPegawaiFromProps;
+    }
+    return pnsList[0] || null;
+  });
+
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterPnsYear, setFilterPnsYear] = useState('ALL'); // 'ALL' | '2027' | '2028' | 'JATUH_TEMPO'
+  const [filterPppkGolongan, setFilterPppkGolongan] = useState('ALL'); // 'ALL' | 'IX' | 'V'
+  const [filterPppkStatus, setFilterPppkStatus] = useState('ALL'); // 'ALL' | 'MENUNGGU' | 'SUDAH_SK'
+
+  // Tab Arsip di bagian bawah
+  const [arsipTab, setArsipTab] = useState('PNS'); // 'PNS' | 'PPPK'
+
+  // ==========================================
+  // FORM STATE KHUSUS PNS (Diterbitkan PA Lumajang)
+  // ==========================================
+  const [nomorSk, setNomorSk] = useState('453/KPA.W13-A8/KP2.1/XI/2026');
+  const [tanggalSk, setTanggalSk] = useState('16-11-2026');
+  const [tmtBaru, setTmtBaru] = useState('01-11-2026');
+  const [mkgTahun, setMkgTahun] = useState(20);
+  const [gajiLama, setGajiLama] = useState(3824500);
+  const [gajiBaru, setGajiBaru] = useState(3945300);
+  const [penandatangan, setPenandatangan] = useState('FATKUR ROSYAD (Ketua Pengadilan Agama Lumajang)');
+
+  // Modal & Toast State
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [activeDocForPreview, setActiveDocForPreview] = useState(null);
+  const [successToast, setSuccessToast] = useState('');
+  const [isSyncingKlikSurat, setIsSyncingKlikSurat] = useState(false);
+
+  // Modal Catat SK Mahkamah Agung untuk PPPK
+  const [showPppkModal, setShowPppkModal] = useState(false);
+  const [selectedPppkForModal, setSelectedPppkForModal] = useState(null);
+  const [pppkModalForm, setPppkModalForm] = useState({
+    noSkMa: '',
+    tanggalSkMa: '',
+    tmtSkMa: '01-02-2027',
+    tanggalDiterima: '',
+    catatan: ''
+  });
+
+  // Sinkronisasi pilihan pegawai dari props luar (misal dari Data Pegawai atau Dashboard)
   useEffect(() => {
     if (selectedPegawaiFromProps) {
-      const isPppk = selectedPegawaiFromProps.statusKepegawaian === 'PPPK' || selectedPegawaiFromProps.nip?.includes('202521');
-      if (isPppk) {
-        setSubTab('PPPK');
+      if (isPppkPegawai(selectedPegawaiFromProps)) {
+        setActiveDaftarTab('PPPK');
+        const found = pppkList.find(p => p.nip === selectedPegawaiFromProps.nip) || selectedPegawaiFromProps;
+        setSelectedPegawai(found);
       } else {
-        setSubTab('PNS');
-        handleSelectPegawai(selectedPegawaiFromProps);
+        setActiveDaftarTab('PNS');
+        const found = pnsList.find(p => p.nip === selectedPegawaiFromProps.nip) || selectedPegawaiFromProps;
+        handleSelectPegawai(found);
       }
     }
   }, [selectedPegawaiFromProps]);
 
-  // Update aparatur pertama jika data PNS KlikCuti selesai dimuat
+  // Set initial pegawai PNS jika belum ada yang terpilih
   useEffect(() => {
-    if (pnsList && pnsList.length > 0 && !selectedPegawaiFromProps) {
-      const matchCurrent = pnsList.some(p => p.id === selectedPegawai?.id);
-      if (!matchCurrent) {
-        handleSelectPegawai(pnsList[0]);
-      }
+    if (!selectedPegawai && pnsList.length > 0) {
+      handleSelectPegawai(pnsList[0]);
     }
   }, [pegawaiList]);
 
-  // Muat nomor register awal langsung dari KlikSurat untuk PNS
+  // Ambil nomor register surat KGB berikutnya dari KlikSurat
   useEffect(() => {
     getNextNomorSkKgb().then(res => {
       if (res && res.nomorSk) {
@@ -141,15 +159,21 @@ export default function LayananKgbView({
     }).catch(() => { });
   }, []);
 
+  // Handler saat memilih pegawai di daftar
   const handleSelectPegawai = (p) => {
     if (!p) return;
     setSelectedPegawai(p);
-    setGajiLama(p.gajiPokokLama || 3824500);
-    setGajiBaru(p.gajiPokokBaru || 3945300);
-    setMkgTahun((p.mkgTahun || 18) + 2);
-    setTmtBaru(p.tmtKgbBerikutnya || '01-11-2026');
+
+    // Jika pegawai yang diklik adalah PNS -> isi data form pembaharuan KGB
+    if (!isPppkPegawai(p)) {
+      setGajiLama(p.gajiPokokLama || 3824500);
+      setGajiBaru(p.gajiPokokBaru || 3945300);
+      setMkgTahun((p.mkgTahun || 18) + 2);
+      setTmtBaru(p.tmtKgbBerikutnya || '01-11-2026');
+    }
   };
 
+  // Handler sinkronisasi nomor KlikSurat
   const handleAmbilNomorKlikSurat = async () => {
     setIsSyncingKlikSurat(true);
     try {
@@ -161,13 +185,16 @@ export default function LayananKgbView({
       setTimeout(() => setSuccessToast(''), 4500);
     } catch (err) {
       setIsSyncingKlikSurat(false);
-      setSuccessToast('Gagal terhubung ke KlikSurat, menggunakan penomoran lokal.');
+      setSuccessToast('Gagal terhubung ke KlikSurat, menggunakan nomor lokal.');
       setTimeout(() => setSuccessToast(''), 3500);
     }
   };
 
+  // Handler Terbitkan & Cetak SK KGB PNS oleh PA Lumajang
   const handleProsesDanTerbitkan = (e) => {
     e.preventDefault();
+    if (!selectedPegawai || isPppkPegawai(selectedPegawai)) return;
+
     const newKgb = {
       id: 'KGB-' + Date.now(),
       nomorSk,
@@ -183,7 +210,7 @@ export default function LayananKgbView({
       mkgTahun: Number(mkgTahun),
       mkgLamaTahun: Math.max(0, Number(mkgTahun) - 2),
       mkgBulan: 0,
-      skLamaNomor: selectedPegawai.noSkTerakhir || `W13-A8/289/KP.04.1/X/2024`,
+      skLamaNomor: selectedPegawai.noSkTerakhir || 'W13-A8/289/KP.04.1/X/2024',
       skLamaTanggal: '25 Oktober 2024',
       skLamaTmt: selectedPegawai.tmtKgbTerakhir || '01 Maret 2025',
       tanggalSk,
@@ -194,7 +221,6 @@ export default function LayananKgbView({
     setActiveDocForPreview(newKgb);
     setShowPreviewModal(true);
 
-    // Registrasi nomor dan arsip ke database pusat KlikSurat
     registerSuratKeluarToKlikSurat({
       id: newKgb.id,
       nomorSurat: newKgb.nomorSk,
@@ -218,39 +244,6 @@ export default function LayananKgbView({
     setShowPreviewModal(true);
   };
 
-  // Filter PNS
-  const filteredPnsList = pnsList.filter(p => {
-    const matchSearch =
-      (p.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.nip || '').includes(searchQuery);
-
-    if (filterYear === 'ALL') return matchSearch;
-    if (filterYear === '2027') return matchSearch && (p.tmtKgbBerikutnya || '').includes('2027');
-    if (filterYear === '2028') return matchSearch && (p.tmtKgbBerikutnya || '').includes('2028');
-    return matchSearch;
-  });
-
-  const total2027Pns = pnsList.filter(p => (p.tmtKgbBerikutnya || '').includes('2027')).length;
-  const total2028Pns = pnsList.filter(p => (p.tmtKgbBerikutnya || '').includes('2028')).length;
-
-  // Filter PPPK
-  const filteredPppkList = pppkList.filter(p => {
-    const matchSearch =
-      (p.nama || '').toLowerCase().includes(searchPppkQuery.toLowerCase()) ||
-      (p.nip || '').includes(searchPppkQuery) ||
-      (p.jabatan || '').toLowerCase().includes(searchPppkQuery.toLowerCase());
-
-    const matchGol = filterPppkGolongan === 'ALL' ? true : p.golongan === filterPppkGolongan;
-    const matchStatus =
-      filterPppkStatus === 'ALL'
-        ? true
-        : filterPppkStatus === 'SUDAH_SK'
-          ? !!p.noSkMa
-          : !p.noSkMa;
-
-    return matchSearch && matchGol && matchStatus;
-  });
-
   // PPPK Modal Handlers
   const handleOpenPppkModal = (pppkItem) => {
     setSelectedPppkForModal(pppkItem);
@@ -259,9 +252,8 @@ export default function LayananKgbView({
       noSkMa: existing?.noSkMa || '',
       tanggalSkMa: existing?.tanggalSkMa || '',
       tmtSkMa: existing?.tmtSkMa || pppkItem.tmtKgbPertama || '01-02-2027',
-      tanggalDiterima: existing?.tanggalDiterima || new Date().toISOString().slice(0, 10),
-      catatan: existing?.catatan || '',
-      status: existing?.noSkMa ? 'SK MA Diterima' : 'Menunggu Terbit MA RI'
+      tanggalDiterima: existing?.tanggalDiterima || new Date().toISOString().split('T')[0],
+      catatan: existing?.catatan || ''
     });
     setShowPppkModal(true);
   };
@@ -287,10 +279,60 @@ export default function LayananKgbView({
       localStorage.setItem('klikapeg_pppk_sk_records', JSON.stringify(updated));
     } catch (err) { }
 
+    // Update state selectedPegawai jika sama
+    if (selectedPegawai?.nip === selectedPppkForModal.nip) {
+      setSelectedPegawai({
+        ...selectedPegawai,
+        noSkMa: pppkModalForm.noSkMa,
+        tanggalSkMa: pppkModalForm.tanggalSkMa,
+        tmtSkMa: pppkModalForm.tmtSkMa,
+        tanggalDiterima: pppkModalForm.tanggalDiterima,
+        catatanMa: pppkModalForm.catatan,
+        statusKontrol: pppkModalForm.noSkMa ? 'SK MA Diterima' : 'Menunggu Terbit MA RI'
+      });
+    }
+
     setShowPppkModal(false);
     setSuccessToast(`Data kontrol nomor SK Mahkamah Agung untuk ${selectedPppkForModal.nama} berhasil disimpan.`);
     setTimeout(() => setSuccessToast(''), 4500);
   };
+
+  // ==========================================
+  // FILTERING DAFTAR
+  // ==========================================
+  // Filter PNS List
+  const filteredPnsList = pnsList.filter(p => {
+    const matchSearch =
+      (p.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.nip || '').includes(searchQuery);
+
+    if (filterPnsYear === 'ALL') return matchSearch;
+    if (filterPnsYear === '2027') return matchSearch && (p.tmtKgbBerikutnya || '').includes('2027');
+    if (filterPnsYear === '2028') return matchSearch && (p.tmtKgbBerikutnya || '').includes('2028');
+    if (filterPnsYear === 'JATUH_TEMPO') return matchSearch && p.statusKgb === 'Jatuh Tempo';
+    return matchSearch;
+  });
+
+  // Filter PPPK List
+  const filteredPppkList = pppkList.filter(p => {
+    const matchSearch =
+      (p.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.nip || '').includes(searchQuery) ||
+      (p.jabatan || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchGol = filterPppkGolongan === 'ALL' ? true : p.golongan === filterPppkGolongan;
+    const matchStatus =
+      filterPppkStatus === 'ALL'
+        ? true
+        : filterPppkStatus === 'SUDAH_SK'
+          ? !!p.noSkMa
+          : !p.noSkMa;
+
+    return matchSearch && matchGol && matchStatus;
+  });
+
+  // Identifikasi status aktif pegawai terpilih
+  const isSelectedPppk = isPppkPegawai(selectedPegawai);
 
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
@@ -306,7 +348,7 @@ export default function LayananKgbView({
             Layanan Kenaikan Gaji Berkala (KGB)
           </h1>
           <p className="text-xs text-on-surface-variant font-medium mt-0.5">
-            Sistem Administrasi KGB PA Lumajang: Penerbitan SK KGB PNS & Kontrol Siklus KGB PPPK Mahkamah Agung.
+            Pemisahan kewenangan resmi: Penerbitan SK KGB PNS oleh PA Lumajang & Kontrol Monitoring KGB PPPK Mahkamah Agung RI.
           </p>
         </div>
       </div>
@@ -318,889 +360,1038 @@ export default function LayananKgbView({
         </div>
       )}
 
-      {/* Sub Menu Navigation: 1. KGB untuk PNS | 2. KGB untuk PPPK */}
-      <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/60 p-2 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {/* Sub Menu 1: KGB untuk PNS */}
-          <button
-            type="button"
-            onClick={() => setSubTab('PNS')}
-            className={`flex items-center gap-3.5 p-3.5 rounded-2xl text-left transition-all ${subTab === 'PNS'
-              ? 'bg-[#1B2A4A] text-white shadow-md ring-2 ring-primary/20'
-              : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-primary'
-              }`}
-          >
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${subTab === 'PNS' ? 'bg-amber-400 text-black shadow-xs' : 'bg-primary/10 text-primary'
-              }`}>
-              <span className="material-symbols-outlined text-[24px]">badge</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-display font-bold text-sm tracking-tight truncate">
-                  1. KGB untuk PNS
-                </span>
-                <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${subTab === 'PNS' ? 'bg-amber-400 text-black' : 'bg-primary/10 text-primary'
-                  }`}>
-                  {pnsList.length} Aparatur
-                </span>
-              </div>
-              <p className={`text-[11px] truncate mt-0.5 font-medium ${subTab === 'PNS' ? 'text-gray-200' : 'text-outline'
-                }`}>
-                Surat dibuat & diterbitkan oleh PA Lumajang
+      {/* ========================================================================= */}
+      {/* MAIN TWO-COLUMN WORKFLOW:                                                 */}
+      {/* KOLOM KIRI : TABEL KONTROL JADWAL KGB (DIPISAHKAN PNS & PPPK)            */}
+      {/* KOLOM KANAN: JIKA PNS -> DATA PEMBAHARUAN & SK KGB                       */}
+      {/*              JIKA PPPK -> PENJELASAN KEWENANGAN MA & MONITORING          */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* ======================================================================= */}
+        {/* KOLOM KIRI (lg:col-span-5): DAFTAR KONTROL JADWAL KGB                   */}
+        {/* ======================================================================= */}
+        <div className="lg:col-span-5 bg-surface-container-lowest rounded-3xl border border-outline-variant/60 shadow-sm p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display font-bold text-base text-primary">
+                Tabel Kontrol Jadwal KGB
+              </h2>
+              <p className="text-[11px] text-outline mt-0.5">
+                {activeDaftarTab === 'PNS'
+                  ? 'Pilih pegawai PNS untuk menerbitkan SK KGB Satker'
+                  : 'Pilih pegawai PPPK untuk monitoring jadwal MA'}
               </p>
             </div>
-          </button>
-
-          {/* Sub Menu 2: KGB untuk PPPK */}
-          <button
-            type="button"
-            onClick={() => setSubTab('PPPK')}
-            className={`flex items-center gap-3.5 p-3.5 rounded-2xl text-left transition-all ${subTab === 'PPPK'
-              ? 'bg-[#1B2A4A] text-white shadow-md ring-2 ring-primary/20'
-              : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-primary'
-              }`}
-          >
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${subTab === 'PPPK' ? 'bg-amber-400 text-black shadow-xs' : 'bg-primary/10 text-primary'
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${activeDaftarTab === 'PNS'
+              ? 'text-sky-900 bg-sky-100 border-sky-300'
+              : 'text-amber-900 bg-amber-100 border-amber-300'
               }`}>
-              <span className="material-symbols-outlined text-[24px]">monitoring</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-display font-bold text-sm tracking-tight truncate">
-                  2. KGB untuk PPPK
-                </span>
-                <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${subTab === 'PPPK' ? 'bg-amber-400 text-black' : 'bg-primary/10 text-primary'
-                  }`}>
-                  {pppkList.length} Aparatur
-                </span>
-              </div>
-              <p className={`text-[11px] truncate mt-0.5 font-medium ${subTab === 'PPPK' ? 'text-gray-200' : 'text-outline'
-                }`}>
-                Diterbitkan Mahkamah Agung • Khusus Kontrol
-              </p>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 1. KONTEN SUB-MENU: KGB UNTUK PNS (Dibuat & Diterbitkan oleh PA Lumajang) */}
-      {/* ========================================================================= */}
-      {subTab === 'PNS' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Banner Kewenangan PNS */}
-          <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                <span className="material-symbols-outlined text-[22px]">assignment_turned_in</span>
-              </div>
-              <div>
-                <p className="font-bold text-primary text-sm">
-                  Kewenangan Satuan Kerja Pengadilan Agama Lumajang Kelas 1A
-                </p>
-                <p className="text-on-surface-variant text-[11.5px] mt-0.5 leading-relaxed">
-                  Berdasarkan pendelegasian wewenang Mahkamah Agung RI, Surat Keputusan KGB bagi Pegawai Negeri Sipil (PNS) <strong>dibuat, diproses, dan diterbitkan resmi oleh Ketua Pengadilan Agama Lumajang</strong>.
-                </p>
-              </div>
-            </div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-[11px] font-bold self-start sm:self-center flex-shrink-0 border border-emerald-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-              <span>Diterbitkan Satker PA Lumajang</span>
+              {activeDaftarTab === 'PNS' ? `${pnsList.length} PNS` : `${pppkList.length} PPPK`}
             </span>
           </div>
 
-          {/* Main Split Layout: Kontrol Jadwal PNS (Kiri) & Form Cetak SK (Kanan) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Column: Tabel Kontrol Jadwal KGB PNS */}
-            <div className="lg:col-span-5 bg-surface-container-lowest rounded-3xl border border-outline-variant/60 shadow-sm p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-display font-bold text-base text-primary">
-                    Tabel Kontrol Jadwal KGB PNS
-                  </h2>
-                  <p className="text-[11px] text-outline mt-0.5">Pilih pegawai untuk memproses SK KGB resmi</p>
-                </div>
-                <span className="text-[11px] font-bold text-sky-900 bg-sky-100 border border-sky-300 px-2.5 py-0.5 rounded-full shadow-2xs">
-                  {filteredPnsList.length} PNS
-                </span>
-              </div>
+          {/* TAB PEMISAH DAFTAR KGB: PNS vs PPPK */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-surface-container rounded-2xl border border-outline-variant/60">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDaftarTab('PNS');
+                // Otomatis pilih PNS pertama jika sebelumnya memilih PPPK
+                if (isSelectedPppk || !selectedPegawai) {
+                  const firstPns = pnsList[0];
+                  if (firstPns) handleSelectPegawai(firstPns);
+                }
+              }}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl font-bold text-xs transition-all ${activeDaftarTab === 'PNS'
+                ? 'bg-[#1B2A4A] text-white shadow-md'
+                : 'text-on-surface-variant hover:bg-surface-container-highest hover:text-primary'
+                }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">badge</span>
+              <span>KGB PNS ({pnsList.length})</span>
+            </button>
 
-              {/* Search & Filter PNS */}
-              <div className="space-y-2">
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-outline">search</span>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Cari nama aparatur PNS atau NIP..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-outline-variant text-xs bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div className="flex gap-1.5 text-[11px] font-semibold">
-                  <button
-                    onClick={() => setFilterYear('ALL')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors ${filterYear === 'ALL' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-outline'}`}
-                  >
-                    Semua ({pnsList.length})
-                  </button>
-                  <button
-                    onClick={() => setFilterYear('2027')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors ${filterYear === '2027' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-outline'}`}
-                  >
-                    Tahun 2027 ({total2027Pns})
-                  </button>
-                  <button
-                    onClick={() => setFilterYear('2028')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors ${filterYear === '2028' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-outline'}`}
-                  >
-                    Tahun 2028 ({total2028Pns})
-                  </button>
-                </div>
-              </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveDaftarTab('PPPK');
+                // Otomatis pilih PPPK pertama jika sebelumnya memilih PNS
+                if (!isSelectedPppk || !selectedPegawai) {
+                  const firstPppk = pppkList[0];
+                  if (firstPppk) handleSelectPegawai(firstPppk);
+                }
+              }}
+              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl font-bold text-xs transition-all ${activeDaftarTab === 'PPPK'
+                ? 'bg-[#1B2A4A] text-white shadow-md'
+                : 'text-on-surface-variant hover:bg-surface-container-highest hover:text-primary'
+                }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">policy</span>
+              <span>KGB PPPK ({pppkList.length})</span>
+            </button>
+          </div>
 
-              {/* PNS Employee Control List */}
-              <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
-                {filteredPnsList.map((pegawai) => {
-                  const isSelected = selectedPegawai?.id === pegawai.id;
+          {/* Search Bar */}
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-outline">search</span>
+            <input
+              type="text"
+              placeholder={activeDaftarTab === 'PNS' ? 'Cari nama atau NIP PNS...' : 'Cari nama atau NIP PPPK...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-low text-xs text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+            />
+          </div>
 
+          {/* Filter Pills Khusus PNS */}
+          {activeDaftarTab === 'PNS' && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setFilterPnsYear('ALL')}
+                className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${filterPnsYear === 'ALL'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface-container-low text-outline hover:text-primary'
+                  }`}
+              >
+                Semua ({pnsList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterPnsYear('2027')}
+                className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${filterPnsYear === '2027'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface-container-low text-outline hover:text-primary'
+                  }`}
+              >
+                Tahun 2027 ({pnsList.filter(p => (p.tmtKgbBerikutnya || '').includes('2027')).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterPnsYear('2028')}
+                className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${filterPnsYear === '2028'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface-container-low text-outline hover:text-primary'
+                  }`}
+              >
+                Tahun 2028 ({pnsList.filter(p => (p.tmtKgbBerikutnya || '').includes('2028')).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterPnsYear('JATUH_TEMPO')}
+                className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${filterPnsYear === 'JATUH_TEMPO'
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : 'bg-surface-container-low text-red-700 hover:text-red-900'
+                  }`}
+              >
+                Jatuh Tempo ({pnsList.filter(p => p.statusKgb === 'Jatuh Tempo').length})
+              </button>
+            </div>
+          )}
+
+          {/* Filter Pills Khusus PPPK */}
+          {activeDaftarTab === 'PPPK' && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setFilterPppkGolongan('ALL')}
+                className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${filterPppkGolongan === 'ALL'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface-container-low text-outline hover:text-primary'
+                  }`}
+              >
+                Semua ({pppkList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterPppkGolongan('IX')}
+                className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${filterPppkGolongan === 'IX'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface-container-low text-outline hover:text-primary'
+                  }`}
+              >
+                Golongan IX (7)
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterPppkGolongan('V')}
+                className={`px-3 py-1 rounded-lg font-bold transition-colors whitespace-nowrap ${filterPppkGolongan === 'V'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface-container-low text-outline hover:text-primary'
+                  }`}
+              >
+                Golongan V (5)
+              </button>
+            </div>
+          )}
+
+          {/* DAFTAR PEGAWAI SCROLLABLE */}
+          <div className="max-h-[580px] overflow-y-auto space-y-2.5 pr-1">
+            {/* 1. TAMPILKAN DAFTAR PNS */}
+            {activeDaftarTab === 'PNS' && (
+              filteredPnsList.length === 0 ? (
+                <div className="py-8 text-center text-outline text-xs">
+                  Tidak ada data pegawai PNS yang sesuai pencarian.
+                </div>
+              ) : (
+                filteredPnsList.map((pegawai) => {
+                  const isSelected = selectedPegawai?.nip === pegawai.nip;
                   return (
                     <div
-                      key={pegawai.id}
+                      key={pegawai.id || pegawai.nip}
                       onClick={() => handleSelectPegawai(pegawai)}
-                      className={`p-3 rounded-2xl border transition-all cursor-pointer ${isSelected
-                        ? 'bg-primary-fixed/20 border-primary shadow-sm ring-1 ring-primary'
-                        : 'bg-surface-container-low border-outline-variant/40 hover:border-primary/40'
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer text-xs ${isSelected
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm'
+                        : 'border-outline-variant/60 bg-surface-container-lowest hover:border-primary/50 hover:bg-surface-container-low'
+                        }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${isSelected ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+                            }`}>
+                            {pegawai.nama.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-primary truncate leading-snug">{pegawai.nama}</p>
+                            <p className="text-[10.5px] text-outline font-mono truncate">
+                              {pegawai.golongan} • NIP. {pegawai.nip}
+                            </p>
+                          </div>
+                        </div>
+
+                        {pegawai.statusKgb === 'Jatuh Tempo' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-800 border border-red-300 flex-shrink-0">
+                            Jatuh Tempo
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-container text-outline flex-shrink-0">
+                            {pegawai.tmtKgbBerikutnya ? `Tahun ${pegawai.tmtKgbBerikutnya.split('-')[2] || '2027'}` : 'PNS'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-2.5 pt-2 border-t border-outline-variant/30 flex items-center justify-between text-[11px]">
+                        <div>
+                          <span className="text-outline">TMT Berikutnya: </span>
+                          <span className="font-bold text-primary font-mono">{pegawai.tmtKgbBerikutnya || '-'}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-emerald-700">{formatRupiah(pegawai.gajiPokokBaru)}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-1 flex items-center justify-between text-[10px] text-outline">
+                        <span className="truncate">SK: {pegawai.noSkTerakhir || 'W13-A8/...'}</span>
+                        <span className="text-sky-700 font-semibold flex-shrink-0">Diterbitkan PA Lmj</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )
+            )}
+
+            {/* 2. TAMPILKAN DAFTAR PPPK */}
+            {activeDaftarTab === 'PPPK' && (
+              filteredPppkList.length === 0 ? (
+                <div className="py-8 text-center text-outline text-xs">
+                  Tidak ada data aparatur PPPK yang sesuai pencarian.
+                </div>
+              ) : (
+                filteredPppkList.map((pppk) => {
+                  const isSelected = selectedPegawai?.nip === pppk.nip;
+                  return (
+                    <div
+                      key={pppk.id || pppk.nip}
+                      onClick={() => handleSelectPegawai(pppk)}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer text-xs ${isSelected
+                        ? 'border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/30 shadow-sm'
+                        : 'border-outline-variant/60 bg-surface-container-lowest hover:border-amber-500/50 hover:bg-surface-container-low'
                         }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <img
-                            src={pegawai.foto}
-                            alt={pegawai.nama}
-                            className="w-10 h-10 rounded-xl object-cover ring-2 ring-outline-variant/60 flex-shrink-0"
+                            src={pppk.foto}
+                            alt={pppk.nama}
+                            className="w-9 h-9 rounded-xl object-cover ring-1 ring-outline-variant/60 flex-shrink-0"
                             onError={(e) => {
-                              e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(pegawai.nama) + '&background=1B2A4A&color=fff';
+                              e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(pppk.nama) + '&background=D4A017&color=000';
                             }}
                           />
-                          <div className="truncate">
-                            <h3 className="font-display font-bold text-xs text-primary truncate">
-                              {pegawai.nama}
-                            </h3>
-                            <p className="text-[11px] text-outline truncate">
-                              {pegawai.golongan} • NIP. {pegawai.nip}
-                            </p>
-                            <p className="text-[10.5px] text-on-surface-variant truncate">
-                              {pegawai.jabatan}
+                          <div className="min-w-0">
+                            <p className="font-bold text-primary truncate leading-snug">{pppk.nama}</p>
+                            <p className="text-[10.5px] text-outline font-mono truncate">
+                              Gol. {pppk.golongan} (PPPK) • NIP. {pppk.nip}
                             </p>
                           </div>
                         </div>
 
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 ${pegawai.tmtKgbBerikutnya?.includes('2027')
-                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                          : 'bg-sky-100 text-sky-900 border border-sky-300'
-                          }`}>
-                          TMT: {pegawai.tmtKgbBerikutnya || '-'}
-                        </span>
+                        {pppk.noSkMa ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex-shrink-0">
+                            SK MA Ada
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex-shrink-0">
+                            Siklus 2027
+                          </span>
+                        )}
                       </div>
 
-                      <div className="mt-2.5 pt-2 border-t border-outline-variant/40 flex items-center justify-between text-[11px]">
+                      <div className="mt-2.5 pt-2 border-t border-outline-variant/30 flex items-center justify-between text-[11px]">
                         <div>
-                          <span className="text-outline">SK Terakhir: </span>
-                          <span className="font-mono text-gray-700 font-semibold">{pegawai.noSkTerakhir || '-'}</span>
+                          <span className="text-outline">TMT KGB I: </span>
+                          <span className="font-bold text-primary font-mono">{pppk.tmtKgbPertama}</span>
                         </div>
-                        <span className="font-bold text-emerald-700">
-                          {formatRupiah(pegawai.gajiPokokBaru)}
-                        </span>
+                        <div className="text-right">
+                          <span className="font-bold text-emerald-700">{formatRupiah(pppk.gajiPokokBaru)}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-1 flex items-center justify-between text-[10px] text-outline">
+                        <span className="truncate">{pppk.jabatan}</span>
+                        <span className="text-amber-800 font-semibold flex-shrink-0">Kewenangan MA RI</span>
                       </div>
                     </div>
                   );
-                })}
-              </div>
-            </div>
-
-            {/* Right Column: Formulir Pembuatan & Penerbitan SK KGB Resmi PA Lumajang */}
-            <div className="lg:col-span-7 bg-surface-container-lowest rounded-3xl border border-outline-variant/60 shadow-sm p-6 space-y-5">
-              <div className="flex items-center justify-between pb-3 border-b border-outline-variant/50">
-                <div>
-                  <h2 className="font-display font-extrabold text-base text-primary">
-                    Formulir Penerbitan SK KGB PNS
-                  </h2>
-                  <p className="text-xs text-outline mt-0.5">
-                    Diterbitkan resmi oleh Pengadilan Agama Lumajang Kelas 1A ditujukan kepada KPPN Bondowoso
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] uppercase font-bold text-secondary bg-secondary-fixed/30 px-2.5 py-1 rounded-full">
-                    Format Standar MA RI
-                  </span>
-                </div>
-              </div>
-
-              {selectedPegawai ? (
-                <form onSubmit={handleProsesDanTerbitkan} className="space-y-4 text-xs">
-                  {/* Info Pegawai Terpilih */}
-                  <div className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/50 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                        {selectedPegawai.nama.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <h4 className="font-display font-bold text-sm text-primary">{selectedPegawai.nama}</h4>
-                        <p className="text-outline text-[11px]">NIP. {selectedPegawai.nip} • Golongan: {selectedPegawai.golongan} ({selectedPegawai.pangkat})</p>
-                        <p className="text-[11px] text-on-surface-variant">{selectedPegawai.jabatan}</p>
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-lg">
-                      PNS Terverifikasi
-                    </span>
-                  </div>
-
-                  {/* Form Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Nomor SK Terintegrasi KlikSurat */}
-                    <div className="md:col-span-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-primary uppercase tracking-wider">
-                          Nomor SK KGB Resmi (Terhubung KlikSurat)
-                        </label>
-                        <button
-                          type="button"
-                          onClick={handleAmbilNomorKlikSurat}
-                          disabled={isSyncingKlikSurat}
-                          className="text-[10.5px] font-bold text-primary hover:text-secondary flex items-center gap-1 cursor-pointer"
-                        >
-                          <span className={`material-symbols-outlined text-[14px] ${isSyncingKlikSurat ? 'animate-spin' : ''}`}>sync</span>
-                          <span>{isSyncingKlikSurat ? 'Mengambil nomor...' : 'Sinkronkan Nomor KlikSurat'}</span>
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          required
-                          value={nomorSk}
-                          onChange={(e) => setNomorSk(e.target.value)}
-                          className="w-full pl-3.5 pr-28 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
-                        />
-                        <span className="absolute right-2.5 top-2.5 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold pointer-events-none">
-                          KlikSurat API
-                        </span>
-                      </div>
-                      <p className="text-[10.5px] text-outline mt-1 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px] text-emerald-600">check_circle</span>
-                        <span>Nomor register surat otomatis terhubung dengan buku agenda digital KlikSurat PA Lumajang</span>
-                      </p>
-                    </div>
-
-                    {/* Tanggal SK */}
-                    <div>
-                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                        Tanggal Surat KGB
-                      </label>
-                      <input
-                        type="text"
-                        value={tanggalSk}
-                        onChange={(e) => setTanggalSk(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-medium text-primary focus:ring-2 focus:ring-primary focus:outline-none"
-                      />
-                    </div>
-
-                    {/* TMT Baru */}
-                    <div>
-                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                        Terhitung Mulai Tanggal (TMT Baru)
-                      </label>
-                      <input
-                        type="text"
-                        value={tmtBaru}
-                        onChange={(e) => setTmtBaru(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
-                      />
-                    </div>
-
-                    {/* Gaji Pokok Lama */}
-                    <div>
-                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                        Gaji Pokok Lama (Rp)
-                      </label>
-                      <input
-                        type="number"
-                        value={gajiLama}
-                        onChange={(e) => setGajiLama(Number(e.target.value))}
-                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-medium text-primary focus:ring-2 focus:ring-primary focus:outline-none"
-                      />
-                      <p className="text-[10.5px] text-outline mt-0.5">{formatRupiah(gajiLama)}</p>
-                    </div>
-
-                    {/* Gaji Pokok Baru */}
-                    <div>
-                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                        Gaji Pokok Baru (PP 5/2024)
-                      </label>
-                      <input
-                        type="number"
-                        value={gajiBaru}
-                        onChange={(e) => setGajiBaru(Number(e.target.value))}
-                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-emerald-700 focus:ring-2 focus:ring-primary focus:outline-none"
-                      />
-                      <p className="text-[10.5px] text-emerald-700 font-bold mt-0.5">{formatRupiah(gajiBaru)}</p>
-                    </div>
-
-                    {/* Masa Kerja Baru */}
-                    <div>
-                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                        Masa Kerja Golongan (Tahun)
-                      </label>
-                      <input
-                        type="number"
-                        value={mkgTahun}
-                        onChange={(e) => setMkgTahun(Number(e.target.value))}
-                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-medium text-primary focus:ring-2 focus:ring-primary focus:outline-none"
-                      />
-                    </div>
-
-                    {/* Tujuan SK */}
-                    <div>
-                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                        Instansi Penerima Tembusan Gaji
-                      </label>
-                      <input
-                        type="text"
-                        readOnly
-                        value="KPPN Bondowoso"
-                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-low text-xs font-semibold text-primary cursor-not-allowed"
-                      />
-                    </div>
-
-                    {/* Pejabat Penandatangan */}
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                        Pejabat Penandatangan SK (PA Lumajang)
-                      </label>
-                      <input
-                        type="text"
-                        value={penandatangan}
-                        onChange={(e) => setPenandatangan(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Submit Buttons PNS */}
-                  <div className="pt-3 border-t border-outline-variant/40 flex items-center justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const draftKgb = {
-                          id: 'DRAFT-' + Date.now(),
-                          nomorSk,
-                          pegawaiId: selectedPegawai.id,
-                          nama: selectedPegawai.nama,
-                          nip: selectedPegawai.nip,
-                          pangkatGolongan: `${selectedPegawai.pangkat} (${selectedPegawai.golongan})`,
-                          jabatan: selectedPegawai.jabatan,
-                          gajiLama: Number(gajiLama),
-                          gajiBaru: Number(gajiBaru),
-                          tmtBaru,
-                          tmtBerikutnya: '01-11-2028',
-                          mkgTahun: Number(mkgTahun),
-                          mkgLamaTahun: Math.max(0, Number(mkgTahun) - 2),
-                          mkgBulan: 0,
-                          skLamaNomor: selectedPegawai.noSkTerakhir || `W13-A8/289/KP.04.1/X/2024`,
-                          skLamaTanggal: '25 Oktober 2024',
-                          skLamaTmt: selectedPegawai.tmtKgbTerakhir || '01 Maret 2025',
-                          tanggalSk,
-                          penandatangan
-                        };
-                        setActiveDocForPreview(draftKgb);
-                        setShowPreviewModal(true);
-                      }}
-                      className="px-4 py-2.5 rounded-xl border border-outline-variant text-xs font-bold text-primary hover:bg-surface-container transition-colors flex items-center gap-1.5 shadow-sm"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">visibility</span>
-                      <span>Pratinjau Draft SK</span>
-                    </button>
-
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold hover:bg-primary-container transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
-                    >
-                      <span className="material-symbols-outlined text-[18px] text-secondary-container">print</span>
-                      <span>Terbitkan & Cetak SK KGB</span>
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="p-8 text-center text-outline">
-                  Silakan pilih pegawai PNS pada daftar sebelah kiri untuk memproses SK KGB.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Bottom Section: Arsip Riwayat SK KGB PNS yang Diterbitkan PA Lumajang */}
-          <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/60 shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-display font-extrabold text-base text-primary">
-                  Arsip Digital SK KGB PNS (Diterbitkan PA Lumajang)
-                </h2>
-                <p className="text-xs text-outline mt-0.5">
-                  Riwayat dokumen SK KGB resmi yang telah diproses dan diterbitkan oleh Pengadilan Agama Lumajang Kelas 1A
-                </p>
-              </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-container text-outline">
-                {riwayatKgbList.length} SK Diterbitkan
-              </span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-surface-container text-primary font-display font-bold uppercase tracking-wider text-[11px] border-b border-outline-variant/60">
-                  <tr>
-                    <th className="py-3 px-4">Nomor SK</th>
-                    <th className="py-3 px-4">Nama Pegawai & NIP</th>
-                    <th className="py-3 px-4">Pangkat / Golongan</th>
-                    <th className="py-3 px-4">TMT KGB Baru</th>
-                    <th className="py-3 px-4">Gaji Pokok Baru</th>
-                    <th className="py-3 px-4">Tanggal SK</th>
-                    <th className="py-3 px-4 text-center">Aksi Dokumen</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/40">
-                  {riwayatKgbList.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="py-8 text-center text-outline">
-                        Belum ada arsip SK KGB yang diterbitkan. Silakan terbitkan melalui formulir di atas.
-                      </td>
-                    </tr>
-                  ) : (
-                    riwayatKgbList.map((item) => (
-                      <tr key={item.id} className="hover:bg-surface-container-low transition-colors">
-                        <td className="py-3 px-4 font-bold text-primary font-mono text-[11px]">
-                          {item.nomorSk}
-                        </td>
-                        <td className="py-3 px-4">
-                          <p className="font-bold text-primary">{item.nama}</p>
-                          <p className="text-[11px] text-outline font-mono">NIP. {item.nip}</p>
-                        </td>
-                        <td className="py-3 px-4 text-on-surface-variant font-medium">
-                          {item.pangkatGolongan}
-                        </td>
-                        <td className="py-3 px-4 font-bold text-primary">
-                          {item.tmtBaru}
-                        </td>
-                        <td className="py-3 px-4 font-bold text-emerald-700">
-                          {formatRupiah(item.gajiBaru)}
-                        </td>
-                        <td className="py-3 px-4 text-outline">
-                          {item.tanggalSk}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <button
-                            onClick={() => handleOpenExistingDoc(item)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-container-low text-primary hover:bg-primary hover:text-white transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">print</span>
-                            <span>Cetak Ulang</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                })
+              )
+            )}
           </div>
         </div>
-      )}
 
-      {/* ========================================================================= */}
-      {/* 2. KONTEN SUB-MENU: KGB UNTUK PPPK (Diterbitkan Mahkamah Agung • Khusus Kontrol) */}
-      {/* ========================================================================= */}
-      {subTab === 'PPPK' && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Banner Kewenangan PPPK */}
-          <div className="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
-            <div className="flex items-start gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-amber-500 text-black flex items-center justify-center flex-shrink-0 font-bold shadow-xs">
-                <span className="material-symbols-outlined text-[24px]">policy</span>
+        {/* ======================================================================= */}
+        {/* KOLOM KANAN (lg:col-span-7): KOLOM SEBELAHNYA                           */}
+        {/* JIKA PEGAWAI PNS  -> MUNCUL DATA PEMBAHARUAN KGB & PENERBITAN SK PA LMJ */}
+        {/* JIKA PEGAWAI PPPK -> TIDAK MUNCULKAN FORM, KARENA KEWENANGAN MA         */}
+        {/* ======================================================================= */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* ===================================================================== */}
+          {/* KONDISI 1: PEGAWAI YANG DIKLIK ADALAH PNS                             */}
+          {/* MUNCUL DATA PEMBAHARUAN KGB & PENERBITAN SK SATKER PA LUMAJANG        */}
+          {/* ===================================================================== */}
+          {!isSelectedPppk && selectedPegawai && (
+            <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/60 shadow-sm p-6 space-y-5 animate-fadeIn">
+              {/* Header Box Kolom PNS */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-outline-variant/50">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-display font-extrabold text-lg text-primary">
+                      Pembaruan Gaji Berkala & Penerbitan SK KGB
+                    </h2>
+                  </div>
+                  <p className="text-xs text-outline mt-0.5">
+                    Isian data pegawai terisi otomatis dan nominal gaji dihitung sesuai Peraturan Pemerintah terbaru.
+                  </p>
+                </div>
+                <span className="self-start sm:self-center px-3 py-1 rounded-xl text-[11px] font-bold bg-amber-400 text-black shadow-xs flex-shrink-0 border border-amber-500/30">
+                  Format SK Mahkamah Agung
+                </span>
               </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-display font-bold text-sm text-primary">
-                    Kewenangan Penerbitan Surat KGB PPPK Berada Pada Mahkamah Agung RI
+
+              {/* Card Profil Pegawai PNS Terpilih */}
+              <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-start gap-4 text-xs">
+                <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-xs">
+                  {selectedPegawai.nama.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary text-white">
+                      {selectedPegawai.golongan}
+                    </span>
+                    <span className="text-outline text-[11px] font-semibold">{selectedPegawai.pangkat}</span>
+                    <span className="text-[10px] font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded-md border border-sky-300">
+                      Master Data KGB
+                    </span>
+                  </div>
+                  <h3 className="font-display font-bold text-base text-primary truncate">
+                    {selectedPegawai.nama}
                   </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900 border border-amber-400">
-                    Aplikasi Hanya Untuk Kontrol
-                  </span>
+                  <p className="text-outline text-[11px] font-mono">
+                    NIP. {selectedPegawai.nip}
+                  </p>
+                  <p className="text-on-surface-variant text-[11.5px] font-medium">
+                    {selectedPegawai.jabatan}
+                  </p>
+                  <p className="text-[10.5px] text-outline pt-1">
+                    SK Terakhir: <strong>{selectedPegawai.noSkTerakhir || 'W13-A8/289/KP.04.1/X/2024'}</strong> (TMT: {selectedPegawai.tmtKgbTerakhir || '01-11-2024'})
+                  </p>
                 </div>
-                <p className="text-on-surface-variant leading-relaxed text-[11.5px]">
-                  Berdasarkan <strong>PermenPAN-RB No. 7 Tahun 2023</strong> dan Petunjuk Teknis Mahkamah Agung RI, Surat Keputusan Kenaikan Gaji Berkala (KGB) bagi Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) dibuat dan diterbitkan langsung secara terpusat oleh <strong>Pejabat Pembina Kepegawaian (PPK) Mahkamah Agung RI</strong>.
-                  <br />
-                  <span className="text-primary font-semibold">
-                    Pengadilan Agama Lumajang TIDAK menerbitkan surat KGB untuk PPPK.
-                  </span>{' '}
-                  Aplikasi KlikApeg menyediakan halaman ini khusus sebagai <strong>Sistem Kontrol & Monitoring Jadwal Berkala, Estimasi Hak Gaji Baru, serta Pencatatan Nomor SK MA</strong> yang diterima.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 self-start md:self-center">
-              <span className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-xs flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-amber-300">verified_user</span>
-                <span>Penerbit Resmi: MA RI</span>
-              </span>
-            </div>
-          </div>
-
-          {/* KPI Ringkasan Kontrol KGB PPPK */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center font-bold flex-shrink-0">
-                <span className="material-symbols-outlined text-[22px]">group</span>
-              </div>
-              <div>
-                <p className="text-[11px] text-outline font-medium">Total Aparatur PPPK</p>
-                <p className="font-display font-extrabold text-lg text-primary">{pppkList.length} Orang</p>
-                <p className="text-[10px] text-gray-500">PA Lumajang Kelas 1A</p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-bold flex-shrink-0">
-                <span className="material-symbols-outlined text-[22px]">work</span>
-              </div>
-              <div>
-                <p className="text-[11px] text-outline font-medium">Distribusi Formasi</p>
-                <p className="font-display font-extrabold text-xs text-primary leading-tight">
-                  7 Gol. IX (Penata)
-                  <br />
-                  5 Gol. V (Operator)
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold flex-shrink-0">
-                <span className="material-symbols-outlined text-[22px]">event_repeat</span>
-              </div>
-              <div>
-                <p className="text-[11px] text-outline font-medium">Siklus Berkala Pertama</p>
-                <p className="font-display font-extrabold text-sm text-primary">01 Februari 2027</p>
-                <p className="text-[10px] text-amber-800 font-semibold">TMT Angkat: 09 Jan 2025</p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold flex-shrink-0">
-                <span className="material-symbols-outlined text-[22px]">account_balance</span>
-              </div>
-              <div>
-                <p className="text-[11px] text-outline font-medium">Status Kewenangan</p>
-                <p className="font-display font-extrabold text-xs text-emerald-800 leading-tight">
-                  Mahkamah Agung RI
-                </p>
-                <p className="text-[10px] text-gray-500">Satker Hanya Memonitor</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabel Kontrol Monitoring KGB PPPK */}
-          <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/60 shadow-sm p-6 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="font-display font-extrabold text-base text-primary flex items-center gap-2">
-                  <span>Tabel Monitoring & Kontrol Jadwal KGB PPPK</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                    Khusus Kontrol Satker
-                  </span>
-                </h2>
-                <p className="text-xs text-outline mt-0.5">
-                  Daftar seluruh aparatur PPPK PA Lumajang untuk pemantauan siklus KGB 2 tahunan dari Mahkamah Agung RI
-                </p>
               </div>
 
-              {/* Search & Filter PPPK */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="relative w-full sm:w-60">
-                  <span className="material-symbols-outlined absolute left-3 top-2 text-[18px] text-outline">search</span>
-                  <input
-                    type="text"
-                    value={searchPppkQuery}
-                    onChange={(e) => setSearchPppkQuery(e.target.value)}
-                    placeholder="Cari nama / NIP PPPK..."
-                    className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-outline-variant text-xs bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-
-                <select
-                  value={filterPppkGolongan}
-                  onChange={(e) => setFilterPppkGolongan(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-outline-variant text-xs font-semibold bg-surface-container-low text-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="ALL">Semua Golongan</option>
-                  <option value="IX">Golongan IX (Penata)</option>
-                  <option value="V">Golongan V (Operator)</option>
-                </select>
-
-                <select
-                  value={filterPppkStatus}
-                  onChange={(e) => setFilterPppkStatus(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-outline-variant text-xs font-semibold bg-surface-container-low text-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="ALL">Semua Status SK</option>
-                  <option value="MENUNGGU">Menunggu Terbit MA</option>
-                  <option value="SUDAH_SK">SK MA Diterima</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-surface-container text-primary font-display font-bold uppercase tracking-wider text-[11px] border-b border-outline-variant/60">
-                  <tr>
-                    <th className="py-3 px-3 text-center w-10">No</th>
-                    <th className="py-3 px-4">Nama PPPK & NIP</th>
-                    <th className="py-3 px-4">Jabatan & Golongan</th>
-                    <th className="py-3 px-4">TMT Pengangkatan</th>
-                    <th className="py-3 px-4">TMT KGB Pertama</th>
-                    <th className="py-3 px-4">Estimasi Gaji Baru</th>
-                    <th className="py-3 px-4">Status SK Mahkamah Agung</th>
-                    <th className="py-3 px-4 text-center">Aksi Kontrol</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/40">
-                  {filteredPppkList.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" className="py-8 text-center text-outline">
-                        Tidak ada data PPPK yang sesuai dengan filter pencarian.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredPppkList.map((pppk, idx) => {
-                      const hasSk = !!pppk.noSkMa;
-
-                      return (
-                        <tr key={pppk.id} className="hover:bg-surface-container-low transition-colors">
-                          <td className="py-3 px-3 text-center text-outline font-semibold">
-                            {idx + 1}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2.5">
-                              <img
-                                src={pppk.foto}
-                                alt={pppk.nama}
-                                className="w-8 h-8 rounded-lg object-cover ring-1 ring-outline-variant/60 flex-shrink-0"
-                                onError={(e) => {
-                                  e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(pppk.nama) + '&background=D4A017&color=000';
-                                }}
-                              />
-                              <div>
-                                <p className="font-bold text-primary">{pppk.nama}</p>
-                                <p className="text-[10.5px] text-outline font-mono">NIP. {pppk.nip}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <p className="font-semibold text-primary">{pppk.jabatan}</p>
-                            <span className="inline-block mt-0.5 px-2 py-0.2 rounded-md text-[10px] font-bold bg-primary/10 text-primary">
-                              Golongan {pppk.golongan} (PPPK)
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 font-mono font-medium text-gray-700">
-                            {pppk.tmtPengangkatan}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="font-mono font-bold text-primary">{pppk.tmtKgbPertama}</span>
-                            <p className="text-[10px] text-outline">Masa Kerja: 2 Th</p>
-                          </td>
-                          <td className="py-3 px-4">
-                            <p className="font-bold text-emerald-700">{formatRupiah(pppk.gajiPokokBaru)}</p>
-                            <p className="text-[10px] text-gray-400 line-through">{formatRupiah(pppk.gajiPokokLama)}</p>
-                          </td>
-                          <td className="py-3 px-4 max-w-xs">
-                            {hasSk ? (
-                              <div className="space-y-0.5">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                                  <span>SK MA Diterima</span>
-                                </span>
-                                <p className="font-mono text-[10.5px] text-primary truncate font-bold">{pppk.noSkMa}</p>
-                                {pppk.tanggalSkMa && (
-                                  <p className="text-[10px] text-outline">Tgl SK: {pppk.tanggalSkMa}</p>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="space-y-0.5">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                                  <span>Menunggu Terbit MA RI</span>
-                                </span>
-                                <p className="text-[10px] text-outline">Siklus 2027 • Diterbitkan Pusat</p>
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPppkModal(pppk)}
-                              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${hasSk
-                                ? 'bg-surface-container text-primary hover:bg-primary hover:text-white border border-outline-variant'
-                                : 'bg-primary text-white hover:bg-primary-container shadow-xs'
-                                }`}
-                              title="Catat atau perbarui nomor SK dari Mahkamah Agung RI"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">
-                                {hasSk ? 'edit_note' : 'add_task'}
-                              </span>
-                              <span>{hasSk ? 'Edit SK MA' : 'Catat SK MA'}</span>
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Note Penegasan Kontrol di Footer Tabel */}
-            <div className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/40 flex items-center gap-2.5 text-xs text-outline">
-              <span className="material-symbols-outlined text-secondary text-[18px]">info</span>
-              <span>
-                <strong>Catatan Pengelola:</strong> Surat KGB PPPK diterbitkan secara resmi oleh Mahkamah Agung RI. Jika satker telah menerima salinan/petikan SK dari Biro Kepegawaian MA RI, gunakan tombol <em>"Catat SK MA"</em> untuk mencatat nomor SK tersebut sebagai arsip kontrol kepegawaian PA Lumajang.
-              </span>
-            </div>
-          </div>
-
-          {/* Modal Catat Nomor SK Mahkamah Agung RI untuk PPPK */}
-          {showPppkModal && selectedPppkForModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto animate-fadeIn">
-              <div className="bg-surface-container-lowest rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-outline-variant relative my-6">
-                <button
-                  type="button"
-                  onClick={() => setShowPppkModal(false)}
-                  className="absolute top-4 right-4 p-1.5 rounded-full text-outline hover:text-primary hover:bg-surface-container transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[20px]">close</span>
-                </button>
-
-                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-outline-variant/50">
-                  <div className="w-11 h-11 rounded-2xl bg-amber-500 text-black flex items-center justify-center flex-shrink-0 font-bold shadow-xs">
-                    <span className="material-symbols-outlined text-[24px]">verified</span>
-                  </div>
-                  <div>
-                    <h3 className="font-display font-extrabold text-base text-primary">
-                      Pencatatan SK KGB PPPK (Mahkamah Agung)
-                    </h3>
-                    <p className="text-xs text-outline">
-                      Pembaruan data kontrol satker atas SK yang diterbitkan oleh MA RI
-                    </p>
-                  </div>
-                </div>
-
-                {/* Info PPPK */}
-                <div className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/50 mb-4 text-xs space-y-1">
-                  <p className="font-display font-bold text-primary text-sm">{selectedPppkForModal.nama}</p>
-                  <p className="text-outline text-[11px]">NIP. {selectedPppkForModal.nip} • Golongan {selectedPppkForModal.golongan}</p>
-                  <p className="text-[11px] text-on-surface-variant">{selectedPppkForModal.jabatan}</p>
-                  <div className="pt-2 mt-2 border-t border-outline-variant/30 flex justify-between items-center text-[11px]">
-                    <span className="text-outline">TMT KGB: <strong>{selectedPppkForModal.tmtKgbPertama}</strong></span>
-                    <span className="text-emerald-700 font-bold">Gaji Baru: {formatRupiah(selectedPppkForModal.gajiPokokBaru)}</span>
-                  </div>
-                </div>
-
-                <form onSubmit={handleSavePppkSk} className="space-y-3.5 text-xs">
-                  <div>
-                    <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                      Nomor Surat Keputusan (SK) Mahkamah Agung RI
+              {/* Formulir Pembaruan & Penerbitan SK KGB Resmi PA Lumajang */}
+              <form onSubmit={handleProsesDanTerbitkan} className="space-y-4 text-xs">
+                {/* Penomoran KlikSurat */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="font-bold text-primary uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <span>NOMOR SURAT PEMBERITAHUAN KGB RESMI</span>
+                      <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        Otomatis KlikSurat
+                      </span>
                     </label>
+                    <button
+                      type="button"
+                      disabled={isSyncingKlikSurat}
+                      onClick={handleAmbilNomorKlikSurat}
+                      className="text-primary hover:underline text-[11px] font-semibold flex items-center gap-1 disabled:opacity-50"
+                    >
+                      <span className={`material-symbols-outlined text-[14px] ${isSyncingKlikSurat ? 'animate-spin' : ''}`}>sync</span>
+                      <span>Ambil Nomor dari KlikSurat</span>
+                    </button>
+                  </div>
+                  <div className="relative">
                     <input
                       type="text"
                       required
-                      placeholder="Contoh: 142/SEK/SK.KP2.1/I/2027"
-                      value={pppkModalForm.noSkMa}
-                      onChange={(e) => setPppkModalForm({ ...pppkModalForm, noSkMa: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                      value={nomorSk}
+                      onChange={(e) => setNomorSk(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low font-mono font-bold text-primary text-xs focus:ring-2 focus:ring-primary focus:outline-none"
                     />
-                    <p className="text-[10.5px] text-outline mt-1">
-                      Nomor petikan SK resmi yang diterbitkan oleh Mahkamah Agung RI
-                    </p>
+                    <span className="absolute right-3 top-2.5 text-[10.5px] font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded-md border border-sky-300">
+                      KlikSurat API
+                    </span>
                   </div>
+                  <p className="text-[10.5px] text-outline mt-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px] text-emerald-600">check_circle</span>
+                    <span>Nomor register surat otomatis terhubung dengan buku agenda digital KlikSurat PA Lumajang</span>
+                  </p>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                        Tanggal SK MA
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="DD-MM-YYYY"
-                        value={pppkModalForm.tanggalSkMa}
-                        onChange={(e) => setPppkModalForm({ ...pppkModalForm, tanggalSkMa: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-medium text-primary focus:ring-2 focus:ring-primary focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                        TMT Berlaku Baru
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="DD-MM-YYYY"
-                        value={pppkModalForm.tmtSkMa}
-                        onChange={(e) => setPppkModalForm({ ...pppkModalForm, tmtSkMa: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
+                {/* Tanggal SK & TMT Baru */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                      Tanggal Surat Diterima di PA Lumajang
+                    <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
+                      TANGGAL SURAT KGB
+                      <span className="ml-1 text-[9px] text-sky-800 font-normal">• Server KlikSurat</span>
                     </label>
                     <input
-                      type="date"
-                      value={pppkModalForm.tanggalDiterima}
-                      onChange={(e) => setPppkModalForm({ ...pppkModalForm, tanggalDiterima: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-medium text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                      type="text"
+                      value={tanggalSk}
+                      onChange={(e) => setTanggalSk(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low font-mono text-primary text-xs focus:ring-2 focus:ring-primary focus:outline-none"
                     />
+                    <p className="text-[10px] text-outline mt-1">Tanggal otomatis sinkron dengan waktu server KlikSurat</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
-                      Catatan / Keterangan Kontrol
+                    <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
+                      TERHITUNG MULAI TANGGAL (TMT BARU)
                     </label>
-                    <textarea
-                      rows="2"
-                      placeholder="Catatan verifikasi atau nomor agenda surat masuk MA..."
-                      value={pppkModalForm.catatan}
-                      onChange={(e) => setPppkModalForm({ ...pppkModalForm, catatan: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs text-primary focus:ring-2 focus:ring-primary focus:outline-none"
-                    ></textarea>
+                    <input
+                      type="text"
+                      value={tmtBaru}
+                      onChange={(e) => setTmtBaru(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low font-mono font-bold text-primary text-xs focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Gaji Pokok Lama & Baru */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
+                      GAJI POKOK LAMA
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-2.5 text-outline font-bold">Rp</span>
+                      <input
+                        type="number"
+                        value={gajiLama}
+                        onChange={(e) => setGajiLama(e.target.value)}
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low font-mono font-bold text-primary text-xs focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
                   </div>
 
-                  <div className="pt-3 border-t border-outline-variant/40 flex items-center justify-end gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setShowPppkModal(false)}
-                      className="px-4 py-2 rounded-xl border border-outline-variant text-xs font-semibold text-outline hover:bg-surface-container transition-colors"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all shadow-md flex items-center gap-1.5"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">save</span>
-                      <span>Simpan Data Kontrol SK MA</span>
-                    </button>
+                  <div>
+                    <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
+                      GAJI POKOK BARU (PERHITUNGAN OTOMATIS)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-2.5 text-emerald-800 font-bold">Rp</span>
+                      <input
+                        type="number"
+                        value={gajiBaru}
+                        onChange={(e) => setGajiBaru(e.target.value)}
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50/50 font-mono font-bold text-emerald-900 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                    <p className="text-[10px] text-emerald-700 mt-1 font-semibold">
+                      Terbilang: {terbilang(Number(gajiBaru))} Rupiah
+                    </p>
                   </div>
-                </form>
+                </div>
+
+                {/* Masa Kerja Golongan (MKG) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
+                      MASA KERJA GOLONGAN (MKG BARU)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={mkgTahun}
+                        onChange={(e) => setMkgTahun(e.target.value)}
+                        className="w-24 px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-low font-bold text-primary text-xs focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                      <span className="text-outline font-semibold">Tahun 0 Bulan</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
+                      TMT KGB BERIKUTNYA (+2 TAHUN)
+                    </label>
+                    <div className="px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low font-mono font-bold text-primary text-xs">
+                      01-11-2028
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pejabat Penandatangan */}
+                <div>
+                  <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
+                    PEJABAT PENANDATANGAN SURAT KGB (PA LUMAJANG)
+                  </label>
+                  <select
+                    value={penandatangan}
+                    onChange={(e) => setPenandatangan(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low text-primary text-xs font-semibold focus:ring-2 focus:ring-primary focus:outline-none"
+                  >
+                    <option value="FATKUR ROSYAD (Ketua Pengadilan Agama Lumajang)">
+                      Fatkur Rosyad, S.Ag., M.H., M.HES. (Ketua Pengadilan Agama Lumajang)
+                    </option>
+                    <option value="SAMSUL BAHRI (Wakil Ketua Pengadilan Agama Lumajang)">
+                      Samsul Bahri, S.H.I., M.H. (Wakil Ketua Pengadilan Agama Lumajang - Plh.)
+                    </option>
+                  </select>
+                </div>
+
+                {/* Tombol Aksi Penerbitan PNS */}
+                <div className="pt-3 border-t border-outline-variant/40 flex flex-col sm:flex-row items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tempKgb = {
+                        id: 'PREVIEW-' + Date.now(),
+                        nomorSk,
+                        pegawaiId: selectedPegawai.id,
+                        nama: selectedPegawai.nama,
+                        nip: selectedPegawai.nip,
+                        pangkatGolongan: `${selectedPegawai.pangkat} (${selectedPegawai.golongan})`,
+                        jabatan: selectedPegawai.jabatan,
+                        gajiLama: Number(gajiLama),
+                        gajiBaru: Number(gajiBaru),
+                        tmtBaru,
+                        tmtBerikutnya: '01-11-2028',
+                        mkgTahun: Number(mkgTahun),
+                        mkgLamaTahun: Math.max(0, Number(mkgTahun) - 2),
+                        mkgBulan: 0,
+                        skLamaNomor: selectedPegawai.noSkTerakhir || 'W13-A8/289/KP.04.1/X/2024',
+                        skLamaTanggal: '25 Oktober 2024',
+                        skLamaTmt: selectedPegawai.tmtKgbTerakhir || '01 Maret 2025',
+                        tanggalSk,
+                        penandatangan
+                      };
+                      setActiveDocForPreview(tempKgb);
+                      setShowPreviewModal(true);
+                    }}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-primary text-primary font-bold hover:bg-primary/5 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">visibility</span>
+                    <span>Pratinjau Draft SK</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary text-white font-bold hover:bg-primary-container transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-amber-300">print</span>
+                    <span>Terbitkan & Cetak SK KGB</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* KONDISI 2: PEGAWAI YANG DIKLIK ADALAH PPPK                            */}
+          {/* TIDAK MEMUNCULKAN DATA PEMBAHARUAN KGB KARENA KEWENANGAN MA           */}
+          {/* ===================================================================== */}
+          {isSelectedPppk && selectedPegawai && (
+            <div className="bg-surface-container-lowest rounded-3xl border border-amber-500/40 shadow-sm p-6 space-y-6 animate-fadeIn">
+              {/* Header Box Kolom PPPK */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-outline-variant/50">
+                <div>
+                  <h2 className="font-display font-extrabold text-lg text-primary flex items-center gap-2">
+                    <span>Monitoring Kontrol KGB PPPK</span>
+                  </h2>
+                  <p className="text-xs text-outline mt-0.5">
+                    Pengadilan Agama Lumajang TIDAK Menerbitkan Surat KGB untuk PPPK.
+                  </p>
+                </div>
+                <span className="self-start sm:self-center px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#1B2A4A] text-white shadow-xs flex items-center gap-1.5 border border-amber-400/40">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span>Kewenangan Mahkamah Agung RI</span>
+                </span>
+              </div>
+
+              {/* BANNER TEGAS KEWENANGAN MAHKAMAH AGUNG (TIDAK MEMUNCULKAN PEMBAHARUAN) */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 text-xs space-y-2">
+                <div className="flex items-center gap-2.5 text-amber-900 font-bold text-sm">
+                  <span className="material-symbols-outlined text-amber-700 text-[24px]">gavel</span>
+                  <span>Kewenangan Penerbitan Surat KGB Berada Pada Mahkamah Agung RI</span>
+                </div>
+                <div className="text-on-surface-variant leading-relaxed text-[11.5px] space-y-1.5">
+                  <p>
+                    Berdasarkan <strong>PermenPAN-RB No. 7 Tahun 2023</strong> dan Petunjuk Teknis Mahkamah Agung RI, Surat Keputusan Kenaikan Gaji Berkala (KGB) untuk Pegawai Pemerintah dengan Perjanjian Kerja (PPPK) dibuat dan diterbitkan langsung secara terpusat oleh <strong>Pejabat Pembina Kepegawaian (PPK) Mahkamah Agung RI</strong> di Jakarta.
+                  </p>
+                  <p className="font-semibold text-primary">
+                    • Pengadilan Agama Lumajang TIDAK menerbitkan surat KGB untuk PPPK.<br />
+                    • Kolom ini tidak memunculkan formulir pembaharuan gaji ataupun penomoran surat satker karena seluruh penetapan SK merupakan kewenangan mutlak Mahkamah Agung RI.<br />
+                    • Satker PA Lumajang hanya bertindak untuk kontrol jadwal, pemantauan estimasi hak gaji baru, dan pencatatan nomor SK setelah surat resmi MA diterima.
+                  </p>
+                </div>
+              </div>
+
+              {/* Card Profil Aparatur PPPK Terpilih */}
+              <div className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/60 flex items-start gap-4 text-xs">
+                <img
+                  src={selectedPegawai.foto}
+                  alt={selectedPegawai.nama}
+                  className="w-14 h-14 rounded-2xl object-cover ring-2 ring-amber-400/60 flex-shrink-0 shadow-xs"
+                  onError={(e) => {
+                    e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(selectedPegawai.nama) + '&background=D4A017&color=000';
+                  }}
+                />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-md text-[10.5px] font-bold bg-[#1B2A4A] text-white">
+                      Golongan {selectedPegawai.golongan} (PPPK)
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300">
+                      Aparatur PPPK PA Lumajang
+                    </span>
+                  </div>
+                  <h3 className="font-display font-bold text-base text-primary truncate">
+                    {selectedPegawai.nama}
+                  </h3>
+                  <p className="text-outline text-[11px] font-mono">
+                    NIP. {selectedPegawai.nip}
+                  </p>
+                  <p className="text-on-surface-variant text-[11.5px] font-medium">
+                    {selectedPegawai.jabatan}
+                  </p>
+                  <div className="pt-2 mt-1 border-t border-outline-variant/30 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-outline">TMT Pengangkatan: </span>
+                      <strong className="text-primary font-mono">{selectedPegawai.tmtPengangkatan || '09-01-2025'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-outline">Jadwal KGB Pertama: </span>
+                      <strong className="text-amber-900 font-mono">{selectedPegawai.tmtKgbPertama || '01-02-2027'}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Komparasi Estimasi Hak Gaji Baru Berdasarkan Perpres No. 11 Tahun 2024 */}
+              <div className="space-y-2">
+                <h4 className="font-display font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-amber-600">payments</span>
+                  <span>Estimasi Hak Gaji Berkala (Perpres No. 11 Tahun 2024)</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/50">
+                    <p className="text-[10.5px] text-outline font-medium">Gaji Pokok Awal (MKG 0 Th)</p>
+                    <p className="font-display font-extrabold text-sm text-gray-700 mt-1">
+                      {formatRupiah(selectedPegawai.gajiPokokLama)}
+                    </p>
+                    <p className="text-[9.5px] text-outline mt-0.5">Sesuai SK Pengangkatan</p>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                    <p className="text-[10.5px] text-emerald-800 font-medium">Estimasi Gaji Baru (MKG 2 Th)</p>
+                    <p className="font-display font-extrabold text-sm text-emerald-900 mt-1">
+                      {formatRupiah(selectedPegawai.gajiPokokBaru)}
+                    </p>
+                    <p className="text-[9.5px] text-emerald-700 mt-0.5">Hak Siklus 01-02-2027</p>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200">
+                    <p className="text-[10.5px] text-sky-800 font-medium">Estimasi Kenaikan Hak</p>
+                    <p className="font-display font-extrabold text-sm text-sky-900 mt-1">
+                      +{formatRupiah(selectedPegawai.gajiPokokBaru - selectedPegawai.gajiPokokLama)}
+                    </p>
+                    <p className="text-[9.5px] text-sky-700 mt-0.5">Sesuai Tabel Perpres 11/2024</p>
+                  </div>
+                </div>
+                <p className="text-[10.5px] text-outline italic">
+                  * Catatan: Penyesuaian hak gaji pada slip/payroll satker baru dapat diproses setelah SK asli atau petikan digital diterbitkan resmi oleh Mahkamah Agung RI.
+                </p>
+              </div>
+
+              {/* Status Dokumen SK Mahkamah Agung */}
+              <div className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/60 space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-primary uppercase tracking-wider text-[11px]">
+                    Status Dokumen SK Mahkamah Agung
+                  </span>
+                  {selectedPegawai.noSkMa ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      SK MA Diterima
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                      Menunggu Terbit MA RI
+                    </span>
+                  )}
+                </div>
+
+                {selectedPegawai.noSkMa ? (
+                  <div className="space-y-1.5 p-3 rounded-xl bg-white border border-emerald-200">
+                    <div className="flex justify-between">
+                      <span className="text-outline">Nomor SK MA:</span>
+                      <span className="font-mono font-bold text-primary">{selectedPegawai.noSkMa}</span>
+                    </div>
+                    {selectedPegawai.tanggalSkMa && (
+                      <div className="flex justify-between">
+                        <span className="text-outline">Tanggal SK MA:</span>
+                        <span className="font-mono">{selectedPegawai.tanggalSkMa}</span>
+                      </div>
+                    )}
+                    {selectedPegawai.tanggalDiterima && (
+                      <div className="flex justify-between">
+                        <span className="text-outline">Tanggal Diterima di PA Lmj:</span>
+                        <span>{selectedPegawai.tanggalDiterima}</span>
+                      </div>
+                    )}
+                    {selectedPegawai.catatanMa && (
+                      <div className="pt-1 text-[11px] text-gray-600 border-t border-gray-100">
+                        Catatan: {selectedPegawai.catatanMa}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-[11px] text-outline">
+                    Belum ada nomor SK yang dicatat. SK KGB akan diterbitkan secara terpusat oleh Biro Kepegawaian Mahkamah Agung RI menjelang siklus berkala Februari 2027.
+                  </div>
+                )}
+
+                {/* Tombol Catat Nomor SK MA untuk Arsip Satker */}
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPppkModal(selectedPegawai)}
+                    className="px-4 py-2 rounded-xl bg-[#1B2A4A] text-white font-bold hover:bg-primary-container transition-all shadow-xs flex items-center gap-1.5 text-xs"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-amber-300">edit_document</span>
+                    <span>{selectedPegawai.noSkMa ? 'Edit Catatan SK MA' : 'Catat Nomor SK Mahkamah Agung'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* ARSIP DIGITAL SK KGB SATKER PA LUMAJANG & DAFTAR KONTROL PPPK            */}
+      {/* ========================================================================= */}
+      <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/60 shadow-sm p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display font-extrabold text-base text-primary">
+              Arsip & Riwayat KGB Satuan Kerja PA Lumajang
+            </h2>
+            <p className="text-xs text-outline mt-0.5">
+              Riwayat dokumen SK KGB PNS terbitan PA Lumajang dan monitoring kontrol KGB PPPK Mahkamah Agung
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl text-xs">
+            <button
+              type="button"
+              onClick={() => setArsipTab('PNS')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${arsipTab === 'PNS' ? 'bg-[#1B2A4A] text-white shadow-xs' : 'text-outline hover:text-primary'
+                }`}
+            >
+              Arsip SK KGB PNS ({riwayatKgbList.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setArsipTab('PPPK')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all ${arsipTab === 'PPPK' ? 'bg-[#1B2A4A] text-white shadow-xs' : 'text-outline hover:text-primary'
+                }`}
+            >
+              Monitoring Kontrol PPPK ({pppkList.length})
+            </button>
+          </div>
+        </div>
+
+        {/* 1. ARSIP SK KGB PNS (TERBITAN PA LUMAJANG) */}
+        {arsipTab === 'PNS' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-surface-container text-primary font-display font-bold uppercase tracking-wider text-[11px] border-b border-outline-variant/60">
+                <tr>
+                  <th className="py-3 px-4">Nomor SK KGB</th>
+                  <th className="py-3 px-4">Nama Pegawai & NIP</th>
+                  <th className="py-3 px-4">Pangkat / Golongan</th>
+                  <th className="py-3 px-4">TMT KGB Baru</th>
+                  <th className="py-3 px-4">Gaji Pokok Baru</th>
+                  <th className="py-3 px-4">Tanggal SK</th>
+                  <th className="py-3 px-4 text-center">Aksi Dokumen</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/40">
+                {riwayatKgbList.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="py-8 text-center text-outline">
+                      Belum ada arsip SK KGB PNS yang diterbitkan. Silakan proses melalui formulir di atas.
+                    </td>
+                  </tr>
+                ) : (
+                  riwayatKgbList.map((item) => (
+                    <tr key={item.id} className="hover:bg-surface-container-low transition-colors">
+                      <td className="py-3 px-4 font-bold text-primary font-mono text-[11px]">
+                        {item.nomorSk}
+                      </td>
+                      <td className="py-3 px-4">
+                        <p className="font-bold text-primary">{item.nama}</p>
+                        <p className="text-[11px] text-outline font-mono">NIP. {item.nip}</p>
+                      </td>
+                      <td className="py-3 px-4 text-on-surface-variant font-medium">
+                        {item.pangkatGolongan}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-primary">
+                        {item.tmtBaru}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-emerald-700">
+                        {formatRupiah(item.gajiBaru)}
+                      </td>
+                      <td className="py-3 px-4 text-outline">
+                        {item.tanggalSk}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          onClick={() => handleOpenExistingDoc(item)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-container-low text-primary hover:bg-primary hover:text-white transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">print</span>
+                          <span>Cetak Ulang</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* 2. ARSIP MONITORING KONTROL PPPK (MAHKAMAH AGUNG RI) */}
+        {arsipTab === 'PPPK' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-surface-container text-primary font-display font-bold uppercase tracking-wider text-[11px] border-b border-outline-variant/60">
+                <tr>
+                  <th className="py-3 px-3 text-center">No</th>
+                  <th className="py-3 px-4">Nama Pegawai & NIP</th>
+                  <th className="py-3 px-4">Formasi & Golongan</th>
+                  <th className="py-3 px-4">TMT Angkat</th>
+                  <th className="py-3 px-4">TMT KGB I</th>
+                  <th className="py-3 px-4">Estimasi Gaji Baru</th>
+                  <th className="py-3 px-4">Status SK Mahkamah Agung</th>
+                  <th className="py-3 px-4 text-center">Pencatatan</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/40">
+                {pppkList.map((pppk, idx) => (
+                  <tr key={pppk.id} className="hover:bg-surface-container-low transition-colors">
+                    <td className="py-3 px-3 text-center text-outline font-semibold">
+                      {idx + 1}
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="font-bold text-primary">{pppk.nama}</p>
+                      <p className="text-[10.5px] text-outline font-mono">NIP. {pppk.nip}</p>
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="font-semibold text-primary">{pppk.jabatan}</p>
+                      <span className="inline-block mt-0.5 px-2 py-0.2 rounded-md text-[10px] font-bold bg-primary/10 text-primary">
+                        Golongan {pppk.golongan} (PPPK)
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-mono font-medium text-gray-700">
+                      {pppk.tmtPengangkatan}
+                    </td>
+                    <td className="py-3 px-4 font-mono font-bold text-primary">
+                      {pppk.tmtKgbPertama}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-emerald-700">
+                      {formatRupiah(pppk.gajiPokokBaru)}
+                    </td>
+                    <td className="py-3 px-4">
+                      {pppk.noSkMa ? (
+                        <div>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                            <span>SK MA Ada</span>
+                          </span>
+                          <p className="font-mono text-[10.5px] text-primary truncate font-bold mt-0.5">{pppk.noSkMa}</p>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                          <span>Menunggu Terbit MA RI</span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPppkModal(pppk)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-container-low text-primary hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">edit_note</span>
+                        <span>Catat SK</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL CATAT NOMOR SK MAHKAMAH AGUNG UNTUK PPPK                           */}
+      {/* ========================================================================= */}
+      {showPppkModal && selectedPppkForModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-outline-variant/60 animate-scaleUp">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/40">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-500 text-[24px]">verified</span>
+                <div>
+                  <h3 className="font-display font-extrabold text-base text-primary">
+                    Pencatatan SK Mahkamah Agung
+                  </h3>
+                  <p className="text-[11px] text-outline">
+                    Kontrol nomor SK KGB PPPK yang diterbitkan Mahkamah Agung RI
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPppkModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-outline transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Info PPPK Terpilih */}
+            <div className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/50 mb-4 text-xs space-y-1">
+              <p className="font-display font-bold text-primary text-sm">{selectedPppkForModal.nama}</p>
+              <p className="text-outline text-[11px]">NIP. {selectedPppkForModal.nip} • Golongan {selectedPppkForModal.golongan} (PPPK)</p>
+              <p className="text-[11px] text-on-surface-variant">{selectedPppkForModal.jabatan}</p>
+              <div className="pt-2 mt-2 border-t border-outline-variant/30 flex justify-between items-center text-[11px]">
+                <span className="text-outline">TMT KGB I: <strong>{selectedPppkForModal.tmtKgbPertama}</strong></span>
+                <span className="text-emerald-700 font-bold">Gaji Baru: {formatRupiah(selectedPppkForModal.gajiPokokBaru)}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSavePppkSk} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                  Nomor Surat Keputusan (SK) Mahkamah Agung RI
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: 142/SEK/SK.KP2.1/I/2027"
+                  value={pppkModalForm.noSkMa}
+                  onChange={(e) => setPppkModalForm({ ...pppkModalForm, noSkMa: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                />
+                <p className="text-[10.5px] text-outline mt-1">
+                  Nomor petikan SK resmi yang diterbitkan oleh Mahkamah Agung RI
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                    Tanggal SK MA
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="DD-MM-YYYY"
+                    value={pppkModalForm.tanggalSkMa}
+                    onChange={(e) => setPppkModalForm({ ...pppkModalForm, tanggalSkMa: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-medium text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                    TMT Berlaku Baru
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="DD-MM-YYYY"
+                    value={pppkModalForm.tmtSkMa}
+                    onChange={(e) => setPppkModalForm({ ...pppkModalForm, tmtSkMa: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                  Tanggal Surat Diterima di PA Lumajang
+                </label>
+                <input
+                  type="date"
+                  value={pppkModalForm.tanggalDiterima}
+                  onChange={(e) => setPppkModalForm({ ...pppkModalForm, tanggalDiterima: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-medium text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                  Catatan / Keterangan Kontrol
+                </label>
+                <textarea
+                  rows="2"
+                  placeholder="Catatan verifikasi atau nomor agenda surat masuk MA..."
+                  value={pppkModalForm.catatan}
+                  onChange={(e) => setPppkModalForm({ ...pppkModalForm, catatan: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                ></textarea>
+              </div>
+
+              <div className="pt-3 border-t border-outline-variant/40 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowPppkModal(false)}
+                  className="px-4 py-2 rounded-xl border border-outline-variant text-xs font-semibold text-outline hover:bg-surface-container transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all shadow-md flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>Simpan Data Kontrol SK MA</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -1246,7 +1437,7 @@ export default function LayananKgbView({
               {/* Tanggal & Tempat Terbit Surat di Sebelah Kanan Atas */}
               <div className="flex justify-end pt-1">
                 <p className="text-xs">
-                  Lumajang, {activeDocForPreview.tanggalSk || '14 November 2026'}
+                  Lumajang, {activeDocForPreview.tanggalSk || '16 November 2026'}
                 </p>
               </div>
 
@@ -1322,150 +1513,118 @@ export default function LayananKgbView({
                       <td className="align-top">6.</td>
                       <td className="align-top">Gaji pokok lama</td>
                       <td className="align-top">:</td>
-                      <td className="align-top">
-                        <span className="font-bold">{formatRupiah(activeDocForPreview.gajiLama)}</span>{' '}
-                        <span className="italic text-[11px]">({terbilang(activeDocForPreview.gajiLama)} rupiah)</span>
+                      <td className="align-top font-mono font-bold">
+                        {formatRupiah(activeDocForPreview.gajiLama)}
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              {/* Atas Dasar SK Terakhir */}
-              <p className="pt-1">
-                Atas dasar surat keputusan terakhir tentang pangkat/gaji yang ditetapkan:
-              </p>
-
-              <div className="pl-2">
-                <table className="w-full text-[12px]">
-                  <tbody>
-                    <tr>
-                      <td className="w-6 align-top">a.</td>
-                      <td className="w-48 align-top">Oleh Pejabat</td>
-                      <td className="w-3 align-top">:</td>
-                      <td className="align-top">Ketua Pengadilan Agama Lumajang</td>
-                    </tr>
-                    <tr>
-                      <td className="align-top">b.</td>
-                      <td className="align-top">Nomor / Tanggal</td>
-                      <td className="align-top">:</td>
-                      <td className="align-top font-sans text-[11px]">
-                        {activeDocForPreview.skLamaNomor || `W13-A8/289/KP.04.1/X/2024`} / {activeDocForPreview.skLamaTanggal || '25 Oktober 2024'}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="align-top">c.</td>
-                      <td className="align-top">Tanggal mulai berlakunya</td>
-                      <td className="align-top">:</td>
-                      <td className="align-top">{activeDocForPreview.skLamaTmt || '01 Maret 2025'}</td>
-                    </tr>
-                    <tr>
-                      <td className="align-top">d.</td>
-                      <td className="align-top">Masa kerja golongan</td>
-                      <td className="align-top">:</td>
-                      <td className="align-top">
-                        {activeDocForPreview.mkgLamaTahun !== undefined ? activeDocForPreview.mkgLamaTahun : Math.max(0, activeDocForPreview.mkgTahun - 2)} Tahun 00 Bulan
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Header Diberikan Kenaikan Gaji Berkala */}
-              <p className="font-bold text-center tracking-wider pt-2 uppercase text-[12.5px]">
-                DIBERIKAN KENAIKAN GAJI BERKALA HINGGA MEMPEROLEH:
-              </p>
-
-              {/* Rincian Poin 7 s/d 11 */}
-              <div className="pl-2">
-                <table className="w-full text-[12px]">
-                  <tbody>
-                    <tr>
-                      <td className="w-6 align-top font-bold">7.</td>
-                      <td className="w-48 align-top font-bold">Gaji pokok baru</td>
-                      <td className="w-3 align-top font-bold">:</td>
-                      <td className="align-top font-bold">
-                        {formatRupiah(activeDocForPreview.gajiBaru)}{' '}
-                        <span className="italic font-normal text-[11px]">({terbilang(activeDocForPreview.gajiBaru)} rupiah)</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="align-top">8.</td>
-                      <td className="align-top">Berdasarkan masa kerja</td>
-                      <td className="align-top">:</td>
-                      <td className="align-top font-semibold">{activeDocForPreview.mkgTahun} Tahun 00 Bulan</td>
-                    </tr>
-                    <tr>
-                      <td className="align-top">9.</td>
-                      <td className="align-top">Dalam golongan / ruang</td>
-                      <td className="align-top">:</td>
-                      <td className="align-top font-semibold">
-                        {activeDocForPreview.pangkatGolongan.includes('(')
-                          ? activeDocForPreview.pangkatGolongan.split('(')[1].replace(')', '')
-                          : activeDocForPreview.pangkatGolongan}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="align-top font-bold">10.</td>
-                      <td className="align-top font-bold">Mulai tanggal</td>
-                      <td className="align-top font-bold">:</td>
-                      <td className="align-top font-bold">{formatTanggalIndo(activeDocForPreview.tmtBaru)}</td>
-                    </tr>
-                    <tr>
-                      <td className="align-top">11.</td>
-                      <td className="align-top">Kenaikan gaji yang akan datang</td>
-                      <td className="align-top">:</td>
-                      <td className="align-top">{formatTanggalIndo(activeDocForPreview.tmtBerikutnya || '01-11-2028')}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Paragraf Penutup */}
-              <p className="text-justify pt-1">
-                Diharapkan agar sesuai dengan Peraturan Pemerintah RI Nomor 5 Tahun 2024 kepada pegawai tersebut dapat dibayarkan penghasilan berdasarkan gaji pokok yang baru.
-              </p>
-
-              {/* Tanda Tangan Ketua PA Lumajang */}
-              <div className="pt-4 flex justify-end">
-                <div className="text-left w-64 text-xs">
-                  <p className="font-bold">Ketua Pengadilan Agama Lumajang,</p>
-                  <div className="h-16 flex items-center">
-                    <span className="text-gray-400 italic text-[11px] no-print">[Tanda Tangan & Cap Dinas]</span>
-                  </div>
-                  <p className="font-bold underline text-sm tracking-wide">
-                    {activeDocForPreview.penandatangan?.split('(')[0]?.trim() || 'FATKUR ROSYAD'}
-                  </p>
+              {/* Paragraf Dasar SK Lama */}
+              <div className="pl-6 text-[12px] space-y-0.5 pt-1 text-justify">
+                <p>atas dasar Surat Keputusan Terakhir tentang gaji / pangkat yang ditetapkan:</p>
+                <div className="pl-3">
+                  <table className="w-full text-[11.5px]">
+                    <tbody>
+                      <tr>
+                        <td className="w-32 align-top">a. Oleh Pejabat</td>
+                        <td className="w-3 align-top">:</td>
+                        <td className="align-top">Ketua Pengadilan Agama Lumajang</td>
+                      </tr>
+                      <tr>
+                        <td className="align-top">b. Tanggal / Nomor</td>
+                        <td className="align-top">:</td>
+                        <td className="align-top font-mono">{activeDocForPreview.skLamaTanggal} / {activeDocForPreview.skLamaNomor}</td>
+                      </tr>
+                      <tr>
+                        <td className="align-top">c. Tgl. berlakunya gaji</td>
+                        <td className="align-top">:</td>
+                        <td className="align-top font-mono">{activeDocForPreview.skLamaTmt}</td>
+                      </tr>
+                      <tr>
+                        <td className="align-top">d. Masa kerja golongan</td>
+                        <td className="align-top">:</td>
+                        <td className="align-top">{activeDocForPreview.mkgLamaTahun || 18} Tahun 0 Bulan</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              {/* Tembusan Resmi */}
-              <div className="pt-2 border-t border-gray-400 text-[10.5px] leading-normal text-gray-800">
-                <p className="font-bold">Tembusan:</p>
-                <ol className="list-decimal list-inside pl-1 space-y-0.5">
-                  <li>Ketua Pengadilan Tinggi Agama Surabaya di Surabaya;</li>
-                  <li>Petugas Pengelola Anggaran Belanja Pegawai Pengadilan Agama Lumajang;</li>
-                  <li>Pegawai yang bersangkutan;</li>
-                  <li>Arsip.</li>
-                </ol>
+              {/* Paragraf Ketetapan Gaji Baru (DIBERIKAN KENAIKAN GAJI BERKALA) */}
+              <div className="pt-2 text-[12px] space-y-1">
+                <p className="font-semibold underline">DIBERIKAN KENAIKAN GAJI BERKALA HINGGA MEMPEROLEH:</p>
+                <div className="pl-2">
+                  <table className="w-full text-[12px]">
+                    <tbody>
+                      <tr>
+                        <td className="w-6 align-top">7.</td>
+                        <td className="w-48 align-top font-bold">Gaji pokok baru</td>
+                        <td className="w-3 align-top">:</td>
+                        <td className="align-top font-bold font-mono text-sm text-primary">
+                          {formatRupiah(activeDocForPreview.gajiBaru)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="align-top">8.</td>
+                        <td className="align-top">Berdasarkan masa kerja</td>
+                        <td className="align-top">:</td>
+                        <td className="align-top font-semibold">{activeDocForPreview.mkgTahun} Tahun 0 Bulan</td>
+                      </tr>
+                      <tr>
+                        <td className="align-top">9.</td>
+                        <td className="align-top">Dalam golongan ruang</td>
+                        <td className="align-top">:</td>
+                        <td className="align-top font-semibold">{activeDocForPreview.pangkatGolongan}</td>
+                      </tr>
+                      <tr>
+                        <td className="align-top">10.</td>
+                        <td className="align-top font-bold">Terhitung mulai tanggal</td>
+                        <td className="align-top">:</td>
+                        <td className="align-top font-bold font-mono">{activeDocForPreview.tmtBaru}</td>
+                      </tr>
+                      <tr>
+                        <td className="align-top">11.</td>
+                        <td className="align-top font-bold">Kenaikan gaji berikutnya</td>
+                        <td className="align-top">:</td>
+                        <td className="align-top font-bold font-mono">{activeDocForPreview.tmtBerikutnya || '01 November 2028'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              {/* Bottom Action Bar (Hidden in Print) */}
-              <div className="no-print pt-6 mt-6 border-t border-gray-300 flex flex-wrap items-center justify-between gap-3">
-                <button
-                  onClick={() => setShowPreviewModal(false)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-300 bg-gray-50 text-gray-700 text-xs font-bold hover:bg-gray-100 hover:text-black transition-colors shadow-sm"
-                >
-                  <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                  <span>Kembali ke Halaman Layanan KGB</span>
-                </button>
-                <button
-                  onClick={() => window.print()}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-colors shadow-sm"
-                >
-                  <span className="material-symbols-outlined text-[18px]">print</span>
-                  <span>Cetak Dokumen (Print / PDF)</span>
-                </button>
+              {/* Paragraf Penutup Surat */}
+              <p className="text-justify pt-1">
+                Diharapkan agar kepada pegawai yang bersangkutan dapat dibayarkan penghasilannya berdasarkan gaji pokoknya yang baru.
+              </p>
+
+              {/* Blok Tanda Tangan Ketua PA Lumajang */}
+              <div className="pt-4 flex justify-end">
+                <div className="w-80 text-center space-y-1">
+                  <p className="font-bold text-xs">Ketua Pengadilan Agama Lumajang,</p>
+                  <div className="h-16 flex items-center justify-center">
+                    <span className="text-[10px] text-gray-400 italic">[ Tanda Tangan & Cap Dinas Resmi ]</span>
+                  </div>
+                  <p className="font-bold text-xs underline uppercase tracking-wide">
+                    {activeDocForPreview.penandatangan?.split('(')[0]?.trim() || 'FATKUR ROSYAD, S.Ag., M.H., M.HES.'}
+                  </p>
+                  <p className="text-[11px] font-mono">NIP. 197603031998031002</p>
+                </div>
+              </div>
+
+              {/* Blok Tembusan Surat */}
+              <div className="pt-2 text-[10.5px] border-t border-gray-300">
+                <p className="font-bold">Tembusan disampaikan Kepada Yth.:</p>
+                <ol className="list-decimal list-inside space-y-0.5 text-gray-800 pl-1">
+                  <li>Ketua Mahkamah Agung RI di Jakarta;</li>
+                  <li>Kepala Badan Kepegawaian Negara di Jakarta;</li>
+                  <li>Ketua Pengadilan Tinggi Agama Surabaya di Surabaya;</li>
+                  <li>Kepala Badan Urusan Administrasi MA RI di Jakarta;</li>
+                  <li>Pegawai yang bersangkutan;</li>
+                  <li>Pertinggal / Arsip Kepegawaian.</li>
+                </ol>
               </div>
             </div>
           </div>
