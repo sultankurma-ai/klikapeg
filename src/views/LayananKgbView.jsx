@@ -1651,12 +1651,10 @@ export default function LayananKgbView({
               <div className="pt-2 text-[10.5px] border-t border-gray-300">
                 <p className="font-bold">Tembusan disampaikan Kepada Yth.:</p>
                 <ol className="list-decimal list-inside space-y-0.5 text-gray-800 pl-1">
-                  <li>Ketua Mahkamah Agung RI di Jakarta;</li>
-                  <li>Kepala Badan Kepegawaian Negara di Jakarta;</li>
                   <li>Ketua Pengadilan Tinggi Agama Surabaya di Surabaya;</li>
-                  <li>Kepala Badan Urusan Administrasi MA RI di Jakarta;</li>
+                  <li>Petugas Pengelola Anggaran Belanja Pegawai Pengadilan Agama Lumajang;</li>
                   <li>Pegawai yang bersangkutan;</li>
-                  <li>Pertinggal / Arsip Kepegawaian.</li>
+                  <li>Arsip.</li>
                 </ol>
               </div>
 
