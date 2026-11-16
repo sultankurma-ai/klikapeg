@@ -1561,22 +1561,22 @@ export default function LayananKgbView({
                   <table className="w-full text-[11.5px]">
                     <tbody>
                       <tr>
-                        <td className="w-32 align-top">a. Oleh Pejabat</td>
+                        <td className="w-52 whitespace-nowrap align-top">a. Oleh Pejabat</td>
                         <td className="w-3 align-top">:</td>
                         <td className="align-top">Ketua Pengadilan Agama Lumajang</td>
                       </tr>
                       <tr>
-                        <td className="align-top">b. Tanggal / Nomor</td>
+                        <td className="align-top whitespace-nowrap">b. Tanggal / Nomor</td>
                         <td className="align-top">:</td>
                         <td className="align-top font-mono">{activeDocForPreview.skLamaTanggal} / {activeDocForPreview.skLamaNomor}</td>
                       </tr>
                       <tr>
-                        <td className="align-top">c. Tgl. berlakunya gaji</td>
+                        <td className="align-top whitespace-nowrap">c. Tgl. berlakunya gaji</td>
                         <td className="align-top">:</td>
                         <td className="align-top font-mono">{activeDocForPreview.skLamaTmt}</td>
                       </tr>
                       <tr>
-                        <td className="align-top">d. Masa kerja golongan</td>
+                        <td className="align-top whitespace-nowrap">d. Masa kerja golongan</td>
                         <td className="align-top">:</td>
                         <td className="align-top">{activeDocForPreview.mkgLamaTahun || 18} Tahun 0 Bulan</td>
                       </tr>
