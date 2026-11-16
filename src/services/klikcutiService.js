@@ -124,30 +124,41 @@ function evaluateKgbStatus(dateStr, fallbackIndex) {
 /**
  * Fetch data pegawai & Master Data KGB secara real-time dari Database KlikCuti
  */
-export async function fetchPegawaiFromKlikCuti() {
+export async function fetchPegawaiFromKlikCuti(forceFresh = false) {
   try {
-    // 1. Ambil data master pegawai PA Lumajang
-    const rawPegawai = await fetchSupabaseRest(
+    // Jika forceFresh aktif (misal saat tombol klikcuti di sidebar diklik), bersihkan cache lama
+    if (forceFresh) {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (e) { }
+    }
+
+    // 1. Ambil data resmi dari Menu Master Data KGB KlikCuti (tabel master_kgb) sebagai sumber utama
+    const rawMasterKgb = await fetchSupabaseRest(
       KLIKCUTI_CONFIG,
-      'pegawai?select=*&order=nama_pegawai.asc'
+      'master_kgb?select=*&order=nama_pegawai.asc',
+      { timeoutMs: 10000 }
     );
 
-    // 2. Ambil Master Data KGB dari KlikCuti (tabel master_kgb)
-    let masterKgbMap = {};
-    let totalKgbCount = 0;
+    if (!Array.isArray(rawMasterKgb) || rawMasterKgb.length === 0) {
+      throw new Error('Data dari tabel master_kgb KlikCuti kosong');
+    }
+
+    // 2. Ambil data profil pegawai (tabel pegawai) untuk melengkapi no_wa & unit kerja
+    let profileMap = {};
     try {
-      const rawMasterKgb = await fetchSupabaseRest(
+      const rawPegawai = await fetchSupabaseRest(
         KLIKCUTI_CONFIG,
-        'master_kgb?select=*&order=nama_pegawai.asc'
+        'pegawai?select=*',
+        { timeoutMs: 8000 }
       );
-      if (Array.isArray(rawMasterKgb)) {
-        totalKgbCount = rawMasterKgb.length;
-        rawMasterKgb.forEach(mk => {
-          if (mk.nip) masterKgbMap[mk.nip] = mk;
+      if (Array.isArray(rawPegawai)) {
+        rawPegawai.forEach(p => {
+          if (p.nip && p.nip !== 'admin') profileMap[p.nip] = p;
         });
       }
     } catch (e) {
-      console.warn('Gagal memuat tabel master_kgb KlikCuti:', e);
+      console.warn('Gagal memuat tabel pegawai KlikCuti:', e);
     }
 
     // 3. Ambil data masa kerja
@@ -155,7 +166,8 @@ export async function fetchPegawaiFromKlikCuti() {
     try {
       const rawMasaKerja = await fetchSupabaseRest(
         KLIKCUTI_CONFIG,
-        'masa_kerja?select=*'
+        'masa_kerja?select=*',
+        { timeoutMs: 8000 }
       );
       if (Array.isArray(rawMasaKerja)) {
         rawMasaKerja.forEach(mk => {
@@ -163,68 +175,57 @@ export async function fetchPegawaiFromKlikCuti() {
         });
       }
     } catch (e) {
-      console.warn('Gagal memuat tabel masa_kerja KlikCuti, menggunakan estimasi masa kerja:', e);
+      console.warn('Gagal memuat tabel masa_kerja KlikCuti:', e);
     }
 
-    if (!Array.isArray(rawPegawai) || rawPegawai.length === 0) {
-      throw new Error('Data pegawai dari KlikCuti kosong');
-    }
+    // 4. Map seluruh 35 data resmi master_kgb ke struktur pegawai KlikApeg
+    const mappedList = rawMasterKgb.map((mk, idx) => {
+      const prof = profileMap[mk.nip] || {};
+      const mkData = masaKerjaMap[mk.nip];
 
-    // 4. Filter akun sistem 'admin' dan gabungkan dengan Master Data KGB
-    const filteredPegawai = rawPegawai.filter(p => p.nip && p.nip !== 'admin' && p.nama_pegawai !== 'admin');
+      const isPppk =
+        mk.nip.includes('202521') ||
+        mk.nip.includes('202421') ||
+        mk.golongan === 'V' ||
+        mk.golongan === 'IX' ||
+        prof.jenis_kepegawaian === 'PPPK';
 
-    const mappedList = filteredPegawai.map((p, idx) => {
-      const mk = masaKerjaMap[p.nip];
-      const kgbMaster = masterKgbMap[p.nip];
+      const mkgTahun =
+        mkData?.masa_kerja_tahun ??
+        (isPppk ? (mk.tgl_kgb_terakhir?.includes('2024') ? 2 : 0) : Math.max(4, 2026 - parseInt(mk.nip.substring(8, 12), 10)));
+      const mkgBulan = mkData?.masa_kerja_bulan ?? 0;
 
-      const mkgTahun = mk?.masa_kerja_tahun ?? (p.nip.length >= 18 ? Math.max(2, 2026 - parseInt(p.nip.substring(8, 12), 10)) : 4);
-      const mkgBulan = mk?.masa_kerja_bulan ?? 0;
-
-      let tmtKgbTerakhir;
-      let tmtKgbBerikutnya;
-      let noSkTerakhir = kgbMaster?.no_sk_terakhir || '-';
-      let keteranganKgb = kgbMaster?.keterangan || 'KGB PNS PA Lumajang';
-      let hasMasterKgb = !!kgbMaster;
-      let statusKgb;
-
-      if (kgbMaster && kgbMaster.tgl_kgb_berikutnya) {
-        tmtKgbTerakhir = kgbMaster.tgl_kgb_terakhir || '-';
-        tmtKgbBerikutnya = kgbMaster.tgl_kgb_berikutnya;
-        statusKgb = evaluateKgbStatus(tmtKgbBerikutnya, idx);
-      } else {
-        // Jangan mengarang data untuk pegawai yang belum terdata di Master KGB KlikCuti
-        tmtKgbTerakhir = '-';
-        tmtKgbBerikutnya = '-';
-        statusKgb = 'Belum Ada Data Master KGB';
-      }
-
-      const gajiLama = hitungGajiPokok(p.golongan, mkgTahun);
-      const gajiBaru = hitungGajiPokok(p.golongan, mkgTahun + 2);
+      const gajiLama = isPppk
+        ? (mk.golongan === 'IX' ? 3203600 : 2511500)
+        : hitungGajiPokok(mk.golongan, mkgTahun);
+      const gajiBaru = isPppk
+        ? (mk.golongan === 'IX' ? 3304500 : 2590600)
+        : hitungGajiPokok(mk.golongan, mkgTahun + 2);
 
       return {
-        id: `PEG-${p.nip}`,
-        nip: p.nip,
-        nama: p.nama_pegawai,
-        pangkat: mapGolonganToPangkat(p.golongan),
-        golongan: p.golongan || 'III/a',
-        jabatan: p.jabatan || 'Aparatur Sipil Negara',
-        unitKerja: p.unit_kerja || 'Pengadilan Agama Lumajang',
-        tmtKgbTerakhir,
-        tmtKgbBerikutnya,
-        noSkTerakhir,
-        keteranganKgb,
-        hasMasterKgb,
+        id: `PEG-${mk.nip}`,
+        nip: mk.nip,
+        nama: mk.nama_pegawai,
+        pangkat: mapGolonganToPangkat(mk.golongan),
+        golongan: mk.golongan,
+        jabatan: mk.jabatan,
+        unitKerja: prof.unit_kerja || 'Pengadilan Agama Lumajang',
+        tmtKgbTerakhir: mk.tgl_kgb_terakhir || '-',
+        tmtKgbBerikutnya: mk.tgl_kgb_berikutnya || '-',
+        noSkTerakhir: mk.no_sk_terakhir || '-',
+        keteranganKgb: mk.keterangan || (isPppk ? 'KGB PPPK 2 Tahun Sekali (PermenPAN-RB No. 7/2023)' : 'KGB PNS 2 Tahun Sekali'),
+        hasMasterKgb: true,
         mkgTahun,
         mkgBulan,
         gajiPokokLama: gajiLama,
         gajiPokokBaru: gajiBaru,
-        statusKgb,
-        pendidikan: p.jenis_kepegawaian === 'PPPK' ? 'Sarjana Terapan' : 'S1 Peradilan',
-        statusKepegawaian: p.jenis_kepegawaian || 'PNS',
-        email: `${p.nama_pegawai.toLowerCase().replace(/[^a-z]/g, '').slice(0, 12)}@pa-lumajang.go.id`,
-        noHp: p.no_wa || '081234567890',
-        foto: `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nama_pegawai)}&background=1B2A4A&color=fff&size=150`,
-        source: hasMasterKgb ? 'KlikCuti-MasterDataKGB' : 'KlikCuti-Supabase'
+        statusKgb: evaluateKgbStatus(mk.tgl_kgb_berikutnya, idx),
+        pendidikan: isPppk ? 'Sarjana Terapan' : 'S1 Peradilan',
+        statusKepegawaian: isPppk ? 'PPPK' : 'PNS',
+        email: prof.email || `${mk.nip}@pa-lumajang.go.id`,
+        noHp: prof.no_wa || '081234567890',
+        foto: `https://ui-avatars.com/api/?name=${encodeURIComponent(mk.nama_pegawai)}&background=1B2A4A&color=fff&size=150`,
+        source: 'KlikCuti-MasterDataKGB'
       };
     });
 
@@ -235,7 +236,7 @@ export async function fetchPegawaiFromKlikCuti() {
       success: true,
       data: mappedList,
       count: mappedList.length,
-      masterKgbCount: totalKgbCount,
+      masterKgbCount: rawMasterKgb.length,
       fromCache: false
     };
   } catch (err) {

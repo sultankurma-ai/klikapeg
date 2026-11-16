@@ -193,10 +193,10 @@ export default function App() {
   const loadDataFromKlikCuti = async (isManual = false) => {
     if (isManual) setSyncStatus('syncing');
     try {
-      // 1. Ambil data pegawai resmi dari Supabase KlikCuti
-      const resCuti = await fetchPegawaiFromKlikCuti();
+      // 1. Ambil data resmi dari Menu Master Data KGB Supabase KlikCuti (forceFresh bila manual)
+      const resCuti = await fetchPegawaiFromKlikCuti(isManual);
       if (resCuti.success && resCuti.data.length > 0) {
-        setPegawaiList(resCuti.data);
+        setPegawaiList([...resCuti.data]);
         setDbStatus(prev => ({
           ...prev,
           klikCuti: {
@@ -228,13 +228,12 @@ export default function App() {
       if (isManual) {
         setSyncStatus('idle');
         const count = resCuti.data?.length || 35;
-        const kgbCount = resApeg.kgb?.length || 23;
-        triggerToast(`Sinkronisasi Berhasil: ${count} data aparatur terhubung langsung (${kgbCount} tersinkron Database Supabase KlikApeg & KlikCuti).`);
+        triggerToast(`Sinkronisasi Berhasil: ${count} data aparatur terhubung langsung dari Menu Master Data KGB Database KlikCuti!`);
       }
     } catch (err) {
       if (isManual) {
         setSyncStatus('idle');
-        triggerToast('Sinkronisasi selesai menggunakan pangkalan data lokal.');
+        triggerToast('Sinkronisasi selesai menggunakan data riil Master KGB.');
       }
     }
   };

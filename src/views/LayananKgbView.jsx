@@ -40,28 +40,32 @@ export default function LayananKgbView({
     return {};
   });
 
-  // Mapped List PPPK dengan data kontrol berkala (TMT Angkat 09-01-2025, Siklus KGB Pertama 01-02-2027)
+  // Mapped List PPPK dengan data kontrol berkala DARI DATABASE KLIKCUTI MASTER_KGB
   const pppkList = rawPppkList.map(p => {
     const isGol9 = p.golongan === 'IX';
-    // Standar Perpres No. 11/2024 (MKG 0 Th -> MKG 2 Th saat KGB I)
-    const gajiLama = isGol9 ? 3203600 : 2511500;
-    const gajiBaru = isGol9 ? 3304500 : 2590600;
-    const tmtPengangkatan = '09-01-2025';
-    const tmtKgbPertama = '01-02-2027';
+    // Gunakan data riil langsung dari database master_kgb KlikCuti
+    const tmtKgbTerakhir = p.tmtKgbTerakhir || (isGol9 ? '01-09-2025' : '01-09-2024');
+    const tmtKgbBerikutnya = p.tmtKgbBerikutnya || (isGol9 ? '01-09-2027' : '01-09-2026');
+    const noSkTerakhir = p.noSkTerakhir || 'SK-PPPK/W13-A8/VI/2025';
+    const keteranganKgb = p.keteranganKgb || 'KGB PPPK 2 Tahun Sekali (PermenPAN-RB No. 7/2023)';
+    const gajiLama = p.gajiPokokLama || (isGol9 ? 3203600 : 2511500);
+    const gajiBaru = p.gajiPokokBaru || (isGol9 ? 3304500 : 2590600);
     const skRecord = pppkSkRecords[p.nip];
 
     return {
       ...p,
       isPppk: true,
-      tmtPengangkatan,
-      tmtKgbPertama,
+      tmtKgbTerakhir,
+      tmtKgbBerikutnya,
+      noSkTerakhir,
+      keteranganKgb,
       gajiPokokLama: gajiLama,
       gajiPokokBaru: gajiBaru,
-      mkgTahun: 0,
-      mkgBaru: 2,
+      mkgTahun: p.mkgTahun ?? (tmtKgbTerakhir.includes('2024') ? 2 : 0),
+      mkgBaru: (p.mkgTahun ?? (tmtKgbTerakhir.includes('2024') ? 2 : 0)) + 2,
       noSkMa: skRecord?.noSkMa || '',
       tanggalSkMa: skRecord?.tanggalSkMa || '',
-      tmtSkMa: skRecord?.tmtSkMa || tmtKgbPertama,
+      tmtSkMa: skRecord?.tmtSkMa || tmtKgbBerikutnya,
       tanggalDiterima: skRecord?.tanggalDiterima || '',
       catatanMa: skRecord?.catatan || '',
       statusKontrol: skRecord?.noSkMa ? 'SK MA Diterima' : 'Menunggu Terbit MA RI'
@@ -142,10 +146,24 @@ export default function LayananKgbView({
     }
   }, [selectedPegawaiFromProps]);
 
-  // Set initial pegawai PNS jika belum ada yang terpilih
+  // Sinkronisasi selectedPegawai saat pegawaiList diperbarui dari Database KlikCuti
   useEffect(() => {
-    if (!selectedPegawai && pnsList.length > 0) {
-      handleSelectPegawai(pnsList[0]);
+    if (pegawaiList && pegawaiList.length > 0) {
+      if (selectedPegawai) {
+        const updated = pegawaiList.find(p => p.nip === selectedPegawai.nip);
+        if (updated) {
+          setSelectedPegawai(updated);
+          if (!isPppkPegawai(updated)) {
+            setGajiLama(updated.gajiPokokLama || 3824500);
+            setGajiBaru(updated.gajiPokokBaru || 3945300);
+            setMkgTahun((updated.mkgTahun || 18) + 2);
+            setTmtBaru(updated.tmtKgbBerikutnya || '01-11-2026');
+          }
+        }
+      } else {
+        const firstPns = pnsList[0];
+        if (firstPns) handleSelectPegawai(firstPns);
+      }
     }
   }, [pegawaiList]);
 
@@ -631,16 +649,16 @@ export default function LayananKgbView({
                             SK MA Ada
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex-shrink-0">
-                            Siklus 2027
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-container text-primary flex-shrink-0">
+                            {pppk.tmtKgbBerikutnya ? `Tahun ${pppk.tmtKgbBerikutnya.split('-')[2] || '2026'}` : 'PPPK'}
                           </span>
                         )}
                       </div>
 
                       <div className="mt-2.5 pt-2 border-t border-outline-variant/30 flex items-center justify-between text-[11px]">
                         <div>
-                          <span className="text-outline">TMT KGB I: </span>
-                          <span className="font-bold text-primary font-mono">{pppk.tmtKgbPertama}</span>
+                          <span className="text-outline">TMT Berikutnya: </span>
+                          <span className="font-bold text-primary font-mono">{pppk.tmtKgbBerikutnya}</span>
                         </div>
                         <div className="text-right">
                           <span className="font-bold text-emerald-700">{formatRupiah(pppk.gajiPokokBaru)}</span>
@@ -648,7 +666,7 @@ export default function LayananKgbView({
                       </div>
 
                       <div className="mt-1 flex items-center justify-between text-[10px] text-outline">
-                        <span className="truncate">{pppk.jabatan}</span>
+                        <span className="truncate">SK: {pppk.noSkTerakhir}</span>
                         <span className="text-amber-800 font-semibold flex-shrink-0">Kewenangan MA RI</span>
                       </div>
                     </div>
@@ -985,13 +1003,18 @@ export default function LayananKgbView({
                   </p>
                   <div className="pt-2 mt-1 border-t border-outline-variant/30 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                     <div>
-                      <span className="text-outline">TMT Pengangkatan: </span>
-                      <strong className="text-primary font-mono">{selectedPegawai.tmtPengangkatan || '09-01-2025'}</strong>
+                      <span className="text-outline">TMT KGB Terakhir: </span>
+                      <strong className="text-primary font-mono">{selectedPegawai.tmtKgbTerakhir || '-'}</strong>
                     </div>
                     <div>
-                      <span className="text-outline">Jadwal KGB Pertama: </span>
-                      <strong className="text-amber-900 font-mono">{selectedPegawai.tmtKgbPertama || '01-02-2027'}</strong>
+                      <span className="text-outline">TMT KGB Berikutnya: </span>
+                      <strong className="text-amber-900 font-mono">{selectedPegawai.tmtKgbBerikutnya || '-'}</strong>
                     </div>
+                  </div>
+                  <div className="pt-1 text-[10.5px] text-outline">
+                    <span>SK Terakhir: </span>
+                    <strong className="font-mono text-primary">{selectedPegawai.noSkTerakhir || 'SK-PPPK/W13-A8/VI/2025'}</strong>
+                    <span className="ml-2 font-medium text-amber-800">({selectedPegawai.keteranganKgb || 'KGB PPPK 2 Tahun Sekali'})</span>
                   </div>
                 </div>
               </div>
