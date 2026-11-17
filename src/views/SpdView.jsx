@@ -744,9 +744,7 @@ export default function SpdView({
                       <p>Dikeluarkan: di Lumajang</p>
                       <p>Pada tanggal: {formatTanggalIndo(activeDocForPreview.tanggalBerangkat)}</p>
                       <p className="mt-1 font-bold">Pejabat Pembuat Komitmen,</p>
-                      <div className="h-14 flex items-center">
-                        <span className="text-gray-400 italic text-[11px] no-print">[Tanda Tangan & Cap Dinas]</span>
-                      </div>
+                      <div className="h-14"></div>
                       <p className="font-bold uppercase underline">
                         {activeDocForPreview.ppk?.split('(')[0]?.trim() || 'ROZY ALIFIAN MUKHTAR'}
                       </p>
@@ -776,9 +774,7 @@ export default function SpdView({
                             <p><span className="inline-block w-28">Pada Tanggal</span>: {formatTanggalIndo(activeDocForPreview.tanggalBerangkat)}</p>
                             <div className="pt-2">
                               <p className="font-bold">Kuasa Pengguna Anggaran</p>
-                              <div className="h-12 flex items-center">
-                                <span className="text-gray-400 italic text-[10px] no-print">[Tanda Tangan & Cap Dinas]</span>
-                              </div>
+                              <div className="h-12"></div>
                               <p className="font-bold uppercase underline">ABDUL KODIR, S.Ag., M.M.</p>
                               <p className="font-mono text-[10px]">NIP. 197303221998031004</p>
                             </div>
@@ -795,9 +791,7 @@ export default function SpdView({
                             <p><span className="inline-block w-24">Pada tanggal</span>: {formatTanggalIndo(activeDocForPreview.tanggalBerangkat)}</p>
                             <div className="pt-1">
                               <p className="font-bold">Kepala:</p>
-                              <div className="h-12 flex items-center">
-                                <span className="text-gray-400 italic text-[10px] no-print">[Tanda Tangan & Cap]</span>
-                              </div>
+                              <div className="h-12"></div>
                               <p className="font-bold">( ............................................ )</p>
                               <p className="font-mono text-[10px]">NIP.</p>
                             </div>
@@ -810,9 +804,7 @@ export default function SpdView({
                             <p><span className="inline-block w-24">Pada tanggal</span>: {formatTanggalIndo(activeDocForPreview.tanggalKembali)}</p>
                             <div className="pt-1">
                               <p className="font-bold">Kepala:</p>
-                              <div className="h-12 flex items-center">
-                                <span className="text-gray-400 italic text-[10px] no-print">[Tanda Tangan & Cap]</span>
-                              </div>
+                              <div className="h-12"></div>
                               <p className="font-bold">( ............................................ )</p>
                               <p className="font-mono text-[10px]">NIP.</p>
                             </div>
@@ -920,9 +912,7 @@ export default function SpdView({
                             <p><span className="inline-block w-32">Pada Tanggal</span>: {formatTanggalIndo(activeDocForPreview.tanggalKembali)}</p>
                             <div className="pt-2">
                               <p className="font-bold">Pejabat Pembuat Komitmen,</p>
-                              <div className="h-12 flex items-center">
-                                <span className="text-gray-400 italic text-[10px] no-print">[Tanda Tangan & Cap Dinas]</span>
-                              </div>
+                              <div className="h-12"></div>
                               <p className="font-bold uppercase underline">
                                 {activeDocForPreview.ppk?.split('(')[0]?.trim() || 'ROZY ALIFIAN MUKHTAR'}
                               </p>
@@ -936,9 +926,7 @@ export default function SpdView({
                           </p>
                           <div className="pt-2">
                             <p className="font-bold">Pejabat Pembuat Komitmen,</p>
-                            <div className="h-12 flex items-center">
-                              <span className="text-gray-400 italic text-[10px] no-print">[Tanda Tangan & Cap Dinas]</span>
-                            </div>
+                            <div className="h-12"></div>
                             <p className="font-bold uppercase underline">
                               {activeDocForPreview.ppk?.split('(')[0]?.trim() || 'ROZY ALIFIAN MUKHTAR'}
                             </p>
