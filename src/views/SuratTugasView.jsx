@@ -20,7 +20,7 @@ export default function SuratTugasView({
   const [tanggalMulai, setTanggalMulai] = useState('17-11-2026');
   const [tanggalSelesai, setTanggalSelesai] = useState('18-11-2026');
   const [lamaHari, setLamaHari] = useState(2);
-  const [bebanAnggaran, setBebanAnggaran] = useState('DIPA Badan Urusan Administrasi Mahkamah Agung RI tahun anggaran 2026');
+  const [bebanAnggaran, setBebanAnggaran] = useState('DIPA 04 (Badilag Mahkamah Agung RI)');
   const [mataAnggaran, setMataAnggaran] = useState('005.04.WA.1054.BMA.001.051.A.524111');
   const [pejabatPenandatangan, setPejabatPenandatangan] = useState('FATKUR ROSYAD (Ketua Pengadilan Agama Lumajang)');
 
@@ -473,15 +473,14 @@ export default function SuratTugasView({
               <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1.5">
                 Beban Anggaran
               </label>
-              <select
+              <input
+                type="text"
+                required
                 value={bebanAnggaran}
                 onChange={(e) => setBebanAnggaran(e.target.value)}
+                placeholder="Contoh: DIPA 04 (Badilag Mahkamah Agung RI) / DIPA BUA MARI"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant text-xs font-semibold text-primary bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none"
-              >
-                <option value="DIPA 04 (Badilag Mahkamah Agung RI)">DIPA 04 (Badilag Mahkamah Agung RI)</option>
-                <option value="DIPA 01 (Badan Urusan Administrasi MARI)">DIPA 01 (Badan Urusan Administrasi MARI)</option>
-                <option value="Non-DIPA (Biaya Mandiri/Pihak Ketiga)">Non-DIPA (Biaya Mandiri/Pihak Ketiga)</option>
-              </select>
+              />
             </div>
 
             {/* Mata Anggaran */}
@@ -758,7 +757,7 @@ export default function SuratTugasView({
 
               {/* Paragraf Pembebanan Anggaran & Penutup */}
               <p className="text-justify mb-2 text-[12px]">
-                Biaya akomodasi dan pelaksanaan kegiatan dibebankan pada DIPA Badan Urusan Administrasi Mahkamah Agung RI tahun anggaran 2026.
+                Biaya akomodasi dan pelaksanaan kegiatan dibebankan pada {activeDocForPreview.bebanAnggaran || 'DIPA 04 (Badilag Mahkamah Agung RI)'}.
               </p>
               <p className="text-justify mb-4 text-[12px]">
                 Demikian surat tugas ini dibuat dan dilaksanakan dengan penuh tanggung jawab.
