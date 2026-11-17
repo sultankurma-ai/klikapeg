@@ -243,7 +243,7 @@ export default function LayananKgbView({
       id: newKgb.id,
       nomorSurat: newKgb.nomorSk,
       perihal: `Pemberitahuan Kenaikan Gaji Berkala an. ${selectedPegawai.nama}`,
-      tujuanSurat: 'KPPN Bondowoso',
+      tujuanSurat: 'KPPN Jember',
       tanggalSurat: newKgb.tanggalSk,
       kodeKlasifikasi: 'KP2.1',
       lampiran: '1 Berkas SK KGB'
@@ -1494,9 +1494,9 @@ export default function LayananKgbView({
                       <td className="align-top text-left pl-6 leading-snug">
                         <p>Kepada Yth.</p>
                         <p className="font-bold">Kepala Kantor Pelayanan Perbendaharaan</p>
-                        <p className="font-bold">Negara (KPPN) Bondowoso</p>
+                        <p className="font-bold">Negara (KPPN) Jember</p>
                         <p>di -</p>
-                        <p className="pl-4 font-semibold">BONDOWOSO</p>
+                        <p className="pl-4 font-semibold">JEMBER</p>
                       </td>
                     </tr>
                   </tbody>
