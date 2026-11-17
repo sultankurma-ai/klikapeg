@@ -721,43 +721,44 @@ export default function SuratTugasView({
                 </tbody>
               </table>
 
-              {/* MENUGASKAN & Kepada */}
-              <div className="text-center my-3">
-                <p className="font-bold uppercase tracking-widest text-[13px]">MENUGASKAN</p>
-              </div>
-
-              <p className="font-bold mb-1.5 text-[12px]">Kepada:</p>
-
-              {/* Tabel Pelaksana Tugas Kedinasan */}
-              <table className="w-full text-[11.5px] border-collapse border border-black mb-3">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-black text-center font-bold">
-                    <th className="border border-black py-1.5 px-2 w-10">No.</th>
-                    <th className="border border-black py-1.5 px-3 text-left">Nama / NIP</th>
-                    <th className="border border-black py-1.5 px-3 text-left">Jabatan</th>
-                    <th className="border border-black py-1.5 px-2 w-16">Gol.</th>
-                    <th className="border border-black py-1.5 px-2 w-28">Tanggal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeDocForPreview.pegawaiList.map((p, idx) => (
-                    <tr key={idx} className="border-b border-black">
-                      <td className="border border-black py-1.5 px-2 text-center align-top">{idx + 1}</td>
-                      <td className="border border-black py-1.5 px-3 align-top">
-                        <p className="font-bold">{p.nama}</p>
-                        <p className="font-mono text-[10.5px]">NIP. {p.nip}</p>
-                      </td>
-                      <td className="border border-black py-1.5 px-3 align-top">{p.jabatan}</td>
-                      <td className="border border-black py-1.5 px-2 text-center align-top font-semibold">
-                        {p.golongan || (p.pangkat?.includes('(') ? p.pangkat.split('(')[1].replace(')', '') : p.pangkat)}
-                      </td>
-                      <td className="border border-black py-1.5 px-2 text-center align-top text-[11px]">
-                        {activeDocForPreview.tanggalMulai}
-                      </td>
+              {/* Blok MENUGASKAN, Kepada, & Tabel Pelaksana Tugas Kedinasan */}
+              <div>
+                <p className="text-center font-bold uppercase tracking-widest text-[13px] m-0 p-0">
+                  MENUGASKAN
+                </p>
+                <p className="font-bold text-[12px] m-0 p-0 mt-0.5 mb-0">
+                  Kepada:
+                </p>
+                <table className="w-full text-[11.5px] border-collapse border border-black mt-0 mb-3">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-black text-center font-bold">
+                      <th className="border border-black py-1.5 px-2 w-10">No.</th>
+                      <th className="border border-black py-1.5 px-3 text-left">Nama / NIP</th>
+                      <th className="border border-black py-1.5 px-3 text-left">Jabatan</th>
+                      <th className="border border-black py-1.5 px-2 w-16">Gol.</th>
+                      <th className="border border-black py-1.5 px-2 w-28">Tanggal</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {activeDocForPreview.pegawaiList.map((p, idx) => (
+                      <tr key={idx} className="border-b border-black">
+                        <td className="border border-black py-1.5 px-2 text-center align-top">{idx + 1}</td>
+                        <td className="border border-black py-1.5 px-3 align-top">
+                          <p className="font-bold">{p.nama}</p>
+                          <p className="font-mono text-[10.5px]">NIP. {p.nip}</p>
+                        </td>
+                        <td className="border border-black py-1.5 px-3 align-top">{p.jabatan}</td>
+                        <td className="border border-black py-1.5 px-2 text-center align-top font-semibold">
+                          {p.golongan || (p.pangkat?.includes('(') ? p.pangkat.split('(')[1].replace(')', '') : p.pangkat)}
+                        </td>
+                        <td className="border border-black py-1.5 px-2 text-center align-top text-[11px]">
+                          {activeDocForPreview.tanggalMulai}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Untuk */}
               <table className="w-full text-[12px] mb-3">
