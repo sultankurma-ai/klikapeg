@@ -1633,17 +1633,29 @@ export default function LayananKgbView({
                 Diharapkan agar sesuai dengan Peraturan Pemerintah RI Nomor 5 Tahun 2024 kepada pegawai tersebut dapat dibayarkan penghasilan berdasarkan gaji pokok yang baru.
               </p>
 
-              {/* Blok Tanda Tangan Ketua PA Lumajang */}
-              <div className="pt-4 flex justify-end">
-                <div className="w-80 text-center space-y-1">
-                  <p className="font-bold text-xs">Ketua Pengadilan Agama Lumajang,</p>
-                  <div className="h-16 flex items-center justify-center">
-                    <span className="text-[10px] text-gray-400 italic">[ Tanda Tangan & Cap Dinas Resmi ]</span>
+              {/* Blok Tanda Tangan Elektronik Resmi (Sesuai Format BSrE Mahkamah Agung RI) */}
+              <div className="pt-4 pb-2 flex justify-end">
+                <div className="border border-dashed border-gray-400 bg-white p-2.5 flex items-center gap-3 text-left">
+                  {/* Logo Instansi */}
+                  <img
+                    src="/assets/logo-instansi.png"
+                    alt="Logo Pengadilan Agama Lumajang"
+                    className="w-16 h-16 object-contain flex-shrink-0"
+                  />
+                  {/* Garis Pembatas Hijau Vertikal */}
+                  <div className="w-[3px] self-stretch bg-[#7ca82b] flex-shrink-0 my-0.5"></div>
+                  {/* Teks Identitas TTE */}
+                  <div className="font-sans text-[11px] leading-tight text-black space-y-0.5 pr-2">
+                    <p className="text-[10.5px] text-black">Ditandatangani secara elektronik oleh:</p>
+                    <p className="font-bold uppercase tracking-wide text-[11px]">KETUA</p>
+                    <p className="font-bold uppercase tracking-wide text-[11px]">PENGADILAN AGAMA LUMAJANG</p>
+                    <p className="font-bold uppercase tracking-wide text-[11px] pt-0.5">
+                      {activeDocForPreview.penandatangan?.includes('S.Ag')
+                        ? activeDocForPreview.penandatangan.split('(')[0].trim()
+                        : 'FATKUR ROSYAD, S.Ag., M.H., M.HES.'}
+                    </p>
+                    <p className="font-mono text-[10.5px]">NIP. 197603031998031002</p>
                   </div>
-                  <p className="font-bold text-xs underline uppercase tracking-wide">
-                    {activeDocForPreview.penandatangan?.split('(')[0]?.trim() || 'FATKUR ROSYAD, S.Ag., M.H., M.HES.'}
-                  </p>
-                  <p className="text-[11px] font-mono">NIP. 197603031998031002</p>
                 </div>
               </div>
 

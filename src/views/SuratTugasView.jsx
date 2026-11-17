@@ -766,18 +766,29 @@ export default function SuratTugasView({
 
               {/* Tanda Tangan Elektronik Resmi */}
               <div className="flex justify-end pt-2">
-                <div className="w-80 text-left text-[12px]">
+                <div className="text-left text-[12px] space-y-1.5">
                   <p>Lumajang, {formatTanggalIndo(activeDocForPreview.tanggalSurat)}</p>
-                  <div className="mt-2 p-3 border border-gray-400 rounded-lg bg-gray-50/50">
-                    <p className="text-[10px] text-gray-600 italic">Ditandatangani secara elektronik oleh:</p>
-                    <p className="font-bold uppercase tracking-wide text-[11px] mt-1">KETUA PENGADILAN AGAMA LUMAJANG</p>
-                    <div className="h-10 flex items-center">
-                      <span className="text-emerald-700 font-mono text-[10px] font-bold">✓ Terverifikasi Digital BSrE</span>
+                  <div className="border border-dashed border-gray-400 bg-white p-2.5 flex items-center gap-3 text-left">
+                    {/* Logo Instansi */}
+                    <img
+                      src="/assets/logo-instansi.png"
+                      alt="Logo Pengadilan Agama Lumajang"
+                      className="w-16 h-16 object-contain flex-shrink-0"
+                    />
+                    {/* Garis Pembatas Hijau Vertikal */}
+                    <div className="w-[3px] self-stretch bg-[#7ca82b] flex-shrink-0 my-0.5"></div>
+                    {/* Teks Identitas TTE */}
+                    <div className="font-sans text-[11px] leading-tight text-black space-y-0.5 pr-2">
+                      <p className="text-[10.5px] text-black">Ditandatangani secara elektronik oleh:</p>
+                      <p className="font-bold uppercase tracking-wide text-[11px]">KETUA</p>
+                      <p className="font-bold uppercase tracking-wide text-[11px]">PENGADILAN AGAMA LUMAJANG</p>
+                      <p className="font-bold uppercase tracking-wide text-[11px] pt-0.5">
+                        {activeDocForPreview.pejabatPenandatangan?.includes('S.Ag')
+                          ? activeDocForPreview.pejabatPenandatangan.split('(')[0].trim()
+                          : 'FATKUR ROSYAD, S.Ag., M.H., M.HES.'}
+                      </p>
+                      <p className="font-mono text-[10.5px]">NIP. 197603031998031002</p>
                     </div>
-                    <p className="font-bold uppercase text-[12px]">
-                      {activeDocForPreview.pejabatPenandatangan?.split('(')[0]?.trim() || 'FATKUR ROSYAD'}
-                    </p>
-                    <p className="font-mono text-[10.5px]">NIP. 197300000</p>
                   </div>
                 </div>
               </div>
