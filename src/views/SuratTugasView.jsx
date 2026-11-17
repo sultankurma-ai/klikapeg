@@ -678,12 +678,12 @@ export default function SuratTugasView({
               </div>
 
               {/* Tabel Menimbang & Dasar Hukum */}
-              <table className="w-full text-[12px] mb-3">
+              <table className="w-full text-[12px] mb-3 border-collapse">
                 <tbody>
                   <tr>
-                    <td className="w-24 align-top font-bold">Menimbang</td>
+                    <td className="w-28 align-top font-bold">Menimbang</td>
                     <td className="w-3 align-top">:</td>
-                    <td className="align-top text-justify">
+                    <td className="align-top text-justify leading-snug">
                       Bahwa Menunjuk Surat Ketua Pengadilan Tinggi Agama Surabaya Nomor: 6385/KPTA.W13-A/DL1/XI/2026 Tanggal 06 November 2026 tentang Undangan, maka perlu menugaskan Pejabat yang namanya tersebut dalam surat tugas ini untuk melaksanakan kegiatan tersebut.
                     </td>
                   </tr>
@@ -691,14 +691,31 @@ export default function SuratTugasView({
                     <td colSpan="3" className="py-1"></td>
                   </tr>
                   <tr>
-                    <td className="align-top font-bold">Dasar Hukum</td>
-                    <td className="align-top">:</td>
-                    <td className="align-top text-justify">
-                      <div className="space-y-1">
-                        <p>1. Undang-Undang Nomor 7 Tahun 1989 tentang Peradilan Agama yang telah diubah terakhir dengan Undang-Undang Nomor 50 Tahun 2009;</p>
-                        <p>2. Peraturan Menteri Keuangan Nomor 119 Tahun 2023 tentang Perubahan Atas Peraturan Menteri Keuangan Nomor: 113/PMK.05/2012 tentang Perjalanan Dinas Dalam Negeri Bagi Pejabat Negara, Pegawai Negeri dan Pegawai Tidak Tetap;</p>
-                        <p>3. {activeDocForPreview.dasarHukum || 'Surat Ketua Pengadilan Tinggi Agama Surabaya Nomor: 6385/KPTA.W13-A/DL1/XI/2026 Tanggal 06 November 2026 tentang Undangan.'}</p>
-                      </div>
+                    <td className="w-28 align-top font-bold">Dasar Hukum</td>
+                    <td className="w-3 align-top">:</td>
+                    <td className="align-top">
+                      <table className="w-full text-[12px] border-collapse">
+                        <tbody>
+                          <tr>
+                            <td className="w-5 align-top pr-1 font-normal">1.</td>
+                            <td className="align-top text-justify font-normal leading-snug">
+                              Undang-Undang Nomor 7 Tahun 1989 tentang Peradilan Agama yang telah diubah terakhir dengan Undang-Undang Nomor 50 Tahun 2009;
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="w-5 align-top pr-1 pt-1 font-normal">2.</td>
+                            <td className="align-top text-justify pt-1 font-normal leading-snug">
+                              Peraturan Menteri Keuangan Nomor 119 Tahun 2023 tentang Perubahan Atas Peraturan Menteri Keuangan Nomor: 113/PMK.05/2012 tentang Perjalanan Dinas Dalam Negeri Bagi Pejabat Negara, Pegawai Negeri dan Pegawai Tidak Tetap;
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="w-5 align-top pr-1 pt-1 font-normal">3.</td>
+                            <td className="align-top text-justify pt-1 font-normal leading-snug">
+                              {(activeDocForPreview.dasarHukum || 'Surat Ketua Pengadilan Tinggi Agama Surabaya Nomor: 6385/KPTA.W13-A/DL1/XI/2026 Tanggal 06 November 2026 tentang Undangan.').replace(/^3\.\s*/, '')}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </td>
                   </tr>
                 </tbody>
