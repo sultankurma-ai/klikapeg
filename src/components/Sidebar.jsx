@@ -127,33 +127,11 @@ export default function Sidebar({
             })}
           </nav>
 
-          {/* Status Koneksi Database Eksternal (KlikSurat & KlikCuti) */}
+          {/* Status Koneksi Database Eksternal (KlikCuti) */}
           <div className="pt-2.5 mt-1 border-t border-[#B8870A]/50 space-y-1.5">
             <p className="px-2.5 text-[10px] font-extrabold text-[#041534]/70 uppercase tracking-wider mb-1">
               Koneksi Database Terintegrasi
             </p>
-
-            {/* Tombol / Badge Database KlikSurat */}
-            <div
-              title="Database KlikSurat: Terhubung untuk Penomoran Otomatis & Registrasi Naskah Online"
-              className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[#041534] text-white shadow-xs border border-sky-400/40 hover:border-sky-400/70 transition-all"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.9)] flex-shrink-0" />
-                <div className="truncate text-left">
-                  <p className="font-display font-bold text-xs text-white leading-tight truncate">
-                    Database KlikSurat
-                  </p>
-                  <p className="text-[9.5px] text-sky-300 font-medium truncate">
-                    Register Naskah Online
-                  </p>
-                </div>
-              </div>
-
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-sky-500/20 text-sky-200 border border-sky-400/40 flex-shrink-0">
-                Aktif
-              </span>
-            </div>
 
             {/* Tombol Database KlikCuti (Klik untuk Sinkronisasi) */}
             <button

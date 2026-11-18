@@ -1,19 +1,14 @@
 /**
  * Konfigurasi Database Resmi Terpadu:
  * 1. Database KlikCuti: Master Data Pegawai & Masa Kerja Aparatur PA Lumajang
- * 2. Database KlikSurat: Registrasi Naskah Dinas, Nomor Agenda & Pengarsipan Surat Keluar
- * 3. Database Utama KlikApeg: Penyimpanan Tabel "klikapeg" (KGB, Surat Tugas, & SPD)
+ * 2. Database Utama KlikApeg: Penyimpanan Tabel "klikapeg" (KGB, Surat Tugas, & SPD)
+ * Catatan: Koneksi Database KlikSurat telah dihentikan dan dinonaktifkan (penomoran & tanggal surat diisi manual)
  */
 
 const klikcutiUrl =
   import.meta.env.VITE_KLIKCUTI_SUPABASE_URL || 'https://aprnwkeamcgivihtkacv.supabase.co';
 const klikcutiAnonKey =
   import.meta.env.VITE_KLIKCUTI_SUPABASE_ANON_KEY || 'sb_publishable_LBn8Do3F_Mwkrz3fgSEIOg_ftB4ZWLR';
-
-const kliksuratUrl =
-  import.meta.env.VITE_KLIKSURAT_SUPABASE_URL || 'https://ojtsvrsdqkuqdizmgtfz.supabase.co';
-const kliksuratAnonKey =
-  import.meta.env.VITE_KLIKSURAT_SUPABASE_ANON_KEY || 'sb_publishable_QEFYm2gJsVrp1FB6SRQlXQ_ahrQJ1Zz';
 
 const klikapegUrl =
   import.meta.env.VITE_SUPABASE_URL || 'https://oxphycpabzqamsbueons.supabase.co';
@@ -25,13 +20,6 @@ export const KLIKCUTI_CONFIG = {
   url: klikcutiUrl,
   anonKey: klikcutiAnonKey,
   restEndpoint: `${klikcutiUrl.replace(/\/+$/, '')}/rest/v1`
-};
-
-export const KLIKSURAT_CONFIG = {
-  name: 'Database KlikSurat',
-  url: kliksuratUrl,
-  anonKey: kliksuratAnonKey,
-  restEndpoint: `${kliksuratUrl.replace(/\/+$/, '')}/rest/v1`
 };
 
 export const KLIKAPEG_CONFIG = {

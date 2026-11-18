@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import OfficialKopSurat from '../components/OfficialKopSurat';
 import { formatTanggalIndo } from '../utils/formatters';
-import { getNextNomorSuratTugas, registerSuratKeluarToKlikSurat } from '../services/kliksuratService';
 
 export default function SuratTugasView({
   pegawaiList,
@@ -31,37 +30,6 @@ export default function SuratTugasView({
   const [toastMsg, setToastMsg] = useState('');
   const [nipInput, setNipInput] = useState('');
   const [nipError, setNipError] = useState('');
-  const [isSyncingKlikSurat, setIsSyncingKlikSurat] = useState(false);
-
-  // Auto-connect penomoran awal dari KlikSurat
-  useEffect(() => {
-    getNextNomorSuratTugas().then(res => {
-      if (res && res.nomorSurat) {
-        setNomorSurat(res.nomorSurat);
-        setTanggalSurat(res.tanggalSurat);
-      }
-    }).catch(() => {});
-  }, []);
-
-  const handleAmbilNomorKlikSurat = async () => {
-    setIsSyncingKlikSurat(true);
-    try {
-      const res = await getNextNomorSuratTugas();
-      setNomorSurat(res.nomorSurat);
-      setTanggalSurat(res.tanggalSurat);
-      setIsSyncingKlikSurat(false);
-      setToastMsg(`Nomor register resmi ${res.nomorSurat} & tanggal berhasil diambil langsung dari database KlikSurat.`);
-      setTimeout(() => setToastMsg(''), 4500);
-    } catch (err) {
-      setIsSyncingKlikSurat(false);
-      setToastMsg('Gagal mengambil nomor dari KlikSurat, menggunakan nomor lokal.');
-      setTimeout(() => setToastMsg(''), 3500);
-    }
-  };
-
-  const generateNomorOtomatis = () => {
-    handleAmbilNomorKlikSurat();
-  };
 
   const handleTambahPegawaiByNip = () => {
     const trimmed = nipInput.trim();
@@ -137,24 +105,8 @@ export default function SuratTugasView({
     onSaveSuratTugas(newSt);
     setActiveDocForPreview(newSt);
     setShowPreviewModal(true);
-
-    // Registrasi ke database KlikSurat
-    registerSuratKeluarToKlikSurat({
-      id: newSt.id,
-      nomorSurat: newSt.nomorSurat,
-      perihal: `Surat Tugas: ${newSt.maksudTugas}`,
-      tujuanSurat: newSt.tempatTujuan,
-      tanggalSurat: newSt.tanggalSurat,
-      kodeKlasifikasi: 'ST.KP7.1',
-      lampiran: '1 Berkas Surat Tugas'
-    }).then(res => {
-      if (res && res.registeredToKlikSurat) {
-        setToastMsg(`Surat Tugas Nomor ${nomorSurat} berhasil dibuat dan tercatat di buku register Database KlikSurat.`);
-      } else {
-        setToastMsg(`Surat Tugas Nomor ${nomorSurat} berhasil dibuat dan disimpan.`);
-      }
-      setTimeout(() => setToastMsg(''), 4500);
-    });
+    setToastMsg(`Surat Tugas Nomor ${newSt.nomorSurat} berhasil dibuat dan disimpan.`);
+    setTimeout(() => setToastMsg(''), 4500);
   };
 
   const handleOpenPreview = (stItem) => {
@@ -212,68 +164,39 @@ export default function SuratTugasView({
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            {/* Nomor Surat Terhubung KlikSurat */}
+            {/* Nomor Surat Tugas (Input Manual) */}
             <div className="md:col-span-8">
-              <div className="flex flex-wrap items-center justify-between mb-1.5 gap-1">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-bold text-primary uppercase tracking-wider">
-                    Nomor Surat Tugas Resmi
-                  </label>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Otomatis KlikSurat
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAmbilNomorKlikSurat}
-                  disabled={isSyncingKlikSurat}
-                  className="text-xs text-primary font-bold flex items-center gap-1 hover:text-secondary transition-colors"
-                >
-                  <span className={`material-symbols-outlined text-[16px] text-emerald-600 ${isSyncingKlikSurat ? 'animate-spin' : ''}`}>
-                    sync
-                  </span>
-                  <span>{isSyncingKlikSurat ? 'Mengambil dari KlikSurat...' : 'Ambil Nomor dari KlikSurat'}</span>
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  value={nomorSurat}
-                  onChange={(e) => setNomorSurat(e.target.value)}
-                  className="w-full pl-3.5 pr-28 py-2.5 rounded-xl border border-outline-variant text-xs font-bold text-primary bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none"
-                />
-                <span className="absolute right-2.5 top-2.5 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold pointer-events-none">
-                  KlikSurat API
-                </span>
-              </div>
-              <p className="text-[10.5px] text-outline mt-1 flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px] text-emerald-600">check_circle</span>
-                <span>Nomor agenda resmi tersinkronisasi otomatis dengan buku register KlikSurat PA Lumajang</span>
+              <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1.5">
+                Nomor Surat Tugas Resmi
+              </label>
+              <input
+                type="text"
+                required
+                value={nomorSurat}
+                onChange={(e) => setNomorSurat(e.target.value)}
+                placeholder="Contoh: 1894/KPA.W13-A8/ST.KP7.1/XI/2026"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant text-xs font-bold text-primary bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none"
+              />
+              <p className="text-[10.5px] text-outline mt-1">
+                Nomor surat tugas diisi secara manual sesuai buku agenda dinas.
               </p>
             </div>
 
-            {/* Tanggal Surat Terhubung KlikSurat */}
+            {/* Tanggal Surat Tugas (Input Manual) */}
             <div className="md:col-span-4">
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-primary uppercase tracking-wider">
-                  Tanggal Surat Tugas
-                </label>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-bold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  Server KlikSurat
-                </span>
-              </div>
+              <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1.5">
+                Tanggal Surat Tugas
+              </label>
               <input
                 type="text"
                 required
                 value={tanggalSurat}
                 onChange={(e) => setTanggalSurat(e.target.value)}
+                placeholder="Contoh: 16-11-2026"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant text-xs font-medium text-primary bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none"
               />
               <p className="text-[10.5px] text-outline mt-1">
-                Tanggal otomatis sinkron dengan waktu server KlikSurat
+                Format tanggal: DD-MM-YYYY (Contoh: 16-11-2026)
               </p>
             </div>
 

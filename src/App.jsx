@@ -10,7 +10,6 @@ import SpdView from './views/SpdView';
 import PengaturanAkunView from './views/PengaturanAkunView';
 import { initialPegawai, initialSuratTugas, initialSpd, initialRiwayatKgb } from './data/mockData';
 import { fetchPegawaiFromKlikCuti } from './services/klikcutiService';
-import { checkKlikSuratConnection } from './services/kliksuratService';
 import {
   fetchKlikapegData,
   saveKgbToSupabase,
@@ -185,8 +184,7 @@ export default function App() {
 
   // Status integrasi database eksternal
   const [dbStatus, setDbStatus] = useState({
-    klikCuti: { connected: true, count: 35, label: '35 Aparatur' },
-    klikSurat: { connected: true, label: 'Server Aktif' }
+    klikCuti: { connected: true, count: 35, label: '35 Aparatur' }
   });
 
   const loadDataFromKlikCuti = async (isManual = false) => {
@@ -213,16 +211,6 @@ export default function App() {
       }
       setSuratTugasList(resApeg.suratTugas || []);
       setSpdList(resApeg.spd || []);
-
-      // 3. Cek koneksi register naskah dinas KlikSurat
-      const resSurat = await checkKlikSuratConnection();
-      setDbStatus(prev => ({
-        ...prev,
-        klikSurat: {
-          connected: resSurat.connected,
-          label: resSurat.connected ? 'Server Registrasi Online' : 'Offline'
-        }
-      }));
 
       if (isManual) {
         setSyncStatus('idle');

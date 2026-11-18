@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import OfficialKopSurat from '../components/OfficialKopSurat';
 import { terbilang, formatRupiah, formatTanggalIndo } from '../utils/formatters';
-import { getNextNomorSkKgb, registerSuratKeluarToKlikSurat } from '../services/kliksuratService';
 
 /**
  * Helper untuk menentukan apakah seorang pegawai adalah PPPK atau PNS
@@ -118,7 +117,6 @@ export default function LayananKgbView({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [activeDocForPreview, setActiveDocForPreview] = useState(null);
   const [successToast, setSuccessToast] = useState('');
-  const [isSyncingKlikSurat, setIsSyncingKlikSurat] = useState(false);
 
   // Modal Catat SK Mahkamah Agung untuk PPPK
   const [showPppkModal, setShowPppkModal] = useState(false);
@@ -167,16 +165,6 @@ export default function LayananKgbView({
     }
   }, [pegawaiList]);
 
-  // Ambil nomor register surat KGB berikutnya dari KlikSurat
-  useEffect(() => {
-    getNextNomorSkKgb().then(res => {
-      if (res && res.nomorSk) {
-        setNomorSk(res.nomorSk);
-        setTanggalSk(res.tanggalSk);
-      }
-    }).catch(() => { });
-  }, []);
-
   // Handler saat memilih pegawai di daftar
   const handleSelectPegawai = (p) => {
     if (!p) return;
@@ -188,23 +176,6 @@ export default function LayananKgbView({
       setGajiBaru(p.gajiPokokBaru || 3945300);
       setMkgTahun((p.mkgTahun || 18) + 2);
       setTmtBaru(p.tmtKgbBerikutnya || '01-11-2026');
-    }
-  };
-
-  // Handler sinkronisasi nomor KlikSurat
-  const handleAmbilNomorKlikSurat = async () => {
-    setIsSyncingKlikSurat(true);
-    try {
-      const res = await getNextNomorSkKgb();
-      setNomorSk(res.nomorSk);
-      setTanggalSk(res.tanggalSk);
-      setIsSyncingKlikSurat(false);
-      setSuccessToast(`Nomor register resmi ${res.nomorSk} & tanggal berhasil diambil langsung dari database KlikSurat.`);
-      setTimeout(() => setSuccessToast(''), 4500);
-    } catch (err) {
-      setIsSyncingKlikSurat(false);
-      setSuccessToast('Gagal terhubung ke KlikSurat, menggunakan nomor lokal.');
-      setTimeout(() => setSuccessToast(''), 3500);
     }
   };
 
@@ -238,23 +209,8 @@ export default function LayananKgbView({
     onSaveKgb(newKgb);
     setActiveDocForPreview(newKgb);
     setShowPreviewModal(true);
-
-    registerSuratKeluarToKlikSurat({
-      id: newKgb.id,
-      nomorSurat: newKgb.nomorSk,
-      perihal: `Pemberitahuan Kenaikan Gaji Berkala an. ${selectedPegawai.nama}`,
-      tujuanSurat: 'KPPN Jember',
-      tanggalSurat: newKgb.tanggalSk,
-      kodeKlasifikasi: 'KP2.1',
-      lampiran: '1 Berkas SK KGB'
-    }).then(res => {
-      if (res && res.registeredToKlikSurat) {
-        setSuccessToast(`Surat Pemberitahuan KGB Nomor ${nomorSk} berhasil diterbitkan PA Lumajang dan otomatis tercatat di buku register Database KlikSurat.`);
-      } else {
-        setSuccessToast(`Surat Pemberitahuan KGB Nomor ${nomorSk} berhasil diterbitkan PA Lumajang dan disimpan ke arsip.`);
-      }
-      setTimeout(() => setSuccessToast(''), 4500);
-    });
+    setSuccessToast(`Surat Pemberitahuan KGB Nomor ${newKgb.nomorSk} berhasil diterbitkan PA Lumajang.`);
+    setTimeout(() => setSuccessToast(''), 4500);
   };
 
   const handleOpenExistingDoc = (kgbItem) => {
@@ -738,40 +694,21 @@ export default function LayananKgbView({
 
               {/* Formulir Pembaruan & Penerbitan SK KGB Resmi PA Lumajang */}
               <form onSubmit={handleProsesDanTerbitkan} className="space-y-4 text-xs">
-                {/* Penomoran KlikSurat */}
+                {/* Nomor Surat KGB (Input Manual) */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="font-bold text-primary uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                      <span>NOMOR SURAT PEMBERITAHUAN KGB RESMI</span>
-                      <span className="px-2 py-0.5 rounded-full text-[9.5px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        Otomatis KlikSurat
-                      </span>
-                    </label>
-                    <button
-                      type="button"
-                      disabled={isSyncingKlikSurat}
-                      onClick={handleAmbilNomorKlikSurat}
-                      className="text-primary hover:underline text-[11px] font-semibold flex items-center gap-1 disabled:opacity-50"
-                    >
-                      <span className={`material-symbols-outlined text-[14px] ${isSyncingKlikSurat ? 'animate-spin' : ''}`}>sync</span>
-                      <span>Ambil Nomor dari KlikSurat</span>
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      required
-                      value={nomorSk}
-                      onChange={(e) => setNomorSk(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low font-mono font-bold text-primary text-xs focus:ring-2 focus:ring-primary focus:outline-none"
-                    />
-                    <span className="absolute right-3 top-2.5 text-[10.5px] font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded-md border border-sky-300">
-                      KlikSurat API
-                    </span>
-                  </div>
-                  <p className="text-[10.5px] text-outline mt-1 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[13px] text-emerald-600">check_circle</span>
-                    <span>Nomor register surat otomatis terhubung dengan buku agenda digital KlikSurat PA Lumajang</span>
+                  <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
+                    NOMOR SURAT PEMBERITAHUAN KGB RESMI
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={nomorSk}
+                    onChange={(e) => setNomorSk(e.target.value)}
+                    placeholder="Contoh: 453/KPA.W13-A8/KP2.1/XI/2026"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low font-mono font-bold text-primary text-xs focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                  <p className="text-[10px] text-outline mt-1">
+                    Nomor surat diisi secara manual sesuai buku agenda persuratan dinas.
                   </p>
                 </div>
 
@@ -780,15 +717,18 @@ export default function LayananKgbView({
                   <div>
                     <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
                       TANGGAL SURAT KGB
-                      <span className="ml-1 text-[9px] text-sky-800 font-normal">• Server KlikSurat</span>
                     </label>
                     <input
                       type="text"
+                      required
                       value={tanggalSk}
                       onChange={(e) => setTanggalSk(e.target.value)}
+                      placeholder="Contoh: 16-11-2026"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low font-mono text-primary text-xs focus:ring-2 focus:ring-primary focus:outline-none"
                     />
-                    <p className="text-[10px] text-outline mt-1">Tanggal otomatis sinkron dengan waktu server KlikSurat</p>
+                    <p className="text-[10px] text-outline mt-1">
+                      Format tanggal: DD-MM-YYYY (Contoh: 16-11-2026)
+                    </p>
                   </div>
 
                   <div>
