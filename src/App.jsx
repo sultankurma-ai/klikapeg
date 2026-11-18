@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import Footer from './components/Footer';
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
 import DataPegawaiView from './views/DataPegawaiView';
@@ -403,9 +402,6 @@ export default function App() {
             />
           )}
         </main>
-
-        {/* Footer */}
-        <Footer />
       </div>
     </div>
   );
