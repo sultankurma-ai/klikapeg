@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import OfficialKopSurat from '../components/OfficialKopSurat';
 import { terbilang, formatRupiah, formatTanggalIndo } from '../utils/formatters';
-import { getGajiPp5_2024, hitungTmtBerikutnya } from '../utils/tabelGajiPp5_2024';
+import { getGajiByAturan, getAturanById, hitungTmtBerikutnya } from '../utils/aturanGaji';
 
 /**
  * Helper untuk menentukan apakah seorang pegawai adalah PPPK atau PNS
@@ -21,8 +21,10 @@ export default function LayananKgbView({
   selectedPegawaiFromProps,
   riwayatKgbList,
   onSaveKgb,
-  onNavigate
+  onNavigate,
+  activeAturanGajiId = 'pp-5-2024'
 }) {
+  const activeAturan = getAturanById(activeAturanGajiId);
   // 1. Aparatur PNS (23 orang resmi tercatat di tabel master_kgb Database KlikCuti)
   const pnsList = (pegawaiList || [])
     .filter(p => !isPppkPegawai(p))
@@ -48,8 +50,10 @@ export default function LayananKgbView({
     const tmtKgbBerikutnya = p.tmtKgbBerikutnya || (isGol9 ? '01-09-2027' : '01-09-2026');
     const noSkTerakhir = p.noSkTerakhir || 'SK-PPPK/W13-A8/VI/2025';
     const keteranganKgb = p.keteranganKgb || 'KGB PPPK 2 Tahun Sekali (PermenPAN-RB No. 7/2023)';
-    const gajiLama = p.gajiPokokLama || (isGol9 ? 3203600 : 2511500);
-    const gajiBaru = p.gajiPokokBaru || (isGol9 ? 3304500 : 2590600);
+    const mkgTahun = p.mkgTahun ?? (tmtKgbTerakhir.includes('2024') ? 2 : 0);
+    const mkgBaru = mkgTahun + 2;
+    const gajiLama = getGajiByAturan(activeAturanGajiId, p.golongan, mkgTahun);
+    const gajiBaru = getGajiByAturan(activeAturanGajiId, p.golongan, mkgBaru);
     const skRecord = pppkSkRecords[p.nip];
 
     return {
@@ -61,8 +65,8 @@ export default function LayananKgbView({
       keteranganKgb,
       gajiPokokLama: gajiLama,
       gajiPokokBaru: gajiBaru,
-      mkgTahun: p.mkgTahun ?? (tmtKgbTerakhir.includes('2024') ? 2 : 0),
-      mkgBaru: (p.mkgTahun ?? (tmtKgbTerakhir.includes('2024') ? 2 : 0)) + 2,
+      mkgTahun,
+      mkgBaru,
       noSkMa: skRecord?.noSkMa || '',
       tanggalSkMa: skRecord?.tanggalSkMa || '',
       tmtSkMa: skRecord?.tmtSkMa || tmtKgbBerikutnya,
@@ -111,8 +115,8 @@ export default function LayananKgbView({
   const initialBaseMkgBl = Number(firstPns?.mkgBulan ?? 0);
   const initialNewMkgTh = initialBaseMkgTh + 2;
   const initialTmtBaru = firstPns?.tmtKgbBerikutnya || '01-11-2026';
-  const initialGajiLama = firstPns ? getGajiPp5_2024(firstPns.golongan, initialBaseMkgTh) : 3824500;
-  const initialGajiBaru = firstPns ? getGajiPp5_2024(firstPns.golongan, initialNewMkgTh) : 3945300;
+  const initialGajiLama = firstPns ? getGajiByAturan(activeAturanGajiId, firstPns.golongan, initialBaseMkgTh) : 3824500;
+  const initialGajiBaru = firstPns ? getGajiByAturan(activeAturanGajiId, firstPns.golongan, initialNewMkgTh) : 3945300;
 
   const [nomorSk, setNomorSk] = useState('453/KPA.W13-A8/KP2.1/XI/2026');
   const [tanggalSk, setTanggalSk] = useState('16-11-2026');
@@ -122,6 +126,15 @@ export default function LayananKgbView({
   const [gajiLama, setGajiLama] = useState(initialGajiLama);
   const [gajiBaru, setGajiBaru] = useState(initialGajiBaru);
   const [penandatangan, setPenandatangan] = useState('FATKUR ROSYAD (Ketua Pengadilan Agama Lumajang)');
+
+  // Efek sinkronisasi otomatis saat aturan gaji aktif diubah di Menu Dasar Gaji
+  useEffect(() => {
+    if (selectedPegawai && !isPppkPegawai(selectedPegawai)) {
+      const baseTh = Math.max(0, Number(mkgTahun) - 2);
+      setGajiLama(getGajiByAturan(activeAturanGajiId, selectedPegawai.golongan, baseTh));
+      setGajiBaru(getGajiByAturan(activeAturanGajiId, selectedPegawai.golongan, Number(mkgTahun)));
+    }
+  }, [activeAturanGajiId]);
 
   // Modal & Toast State
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -168,8 +181,8 @@ export default function LayananKgbView({
             setMkgTahun(newTh);
             setMkgBulan(baseBl);
             setTmtBaru(updated.tmtKgbBerikutnya || '01-11-2026');
-            setGajiLama(getGajiPp5_2024(updated.golongan, baseTh));
-            setGajiBaru(getGajiPp5_2024(updated.golongan, newTh));
+            setGajiLama(getGajiByAturan(activeAturanGajiId, updated.golongan, baseTh));
+            setGajiBaru(getGajiByAturan(activeAturanGajiId, updated.golongan, newTh));
           }
         }
       } else {
@@ -177,7 +190,7 @@ export default function LayananKgbView({
         if (firstPnsItem) handleSelectPegawai(firstPnsItem);
       }
     }
-  }, [pegawaiList]);
+  }, [pegawaiList, activeAturanGajiId]);
 
   // Handler saat memilih pegawai di daftar
   const handleSelectPegawai = (p) => {
@@ -192,8 +205,8 @@ export default function LayananKgbView({
       setMkgTahun(newTh);
       setMkgBulan(baseBl);
       setTmtBaru(p.tmtKgbBerikutnya || '01-11-2026');
-      setGajiLama(getGajiPp5_2024(p.golongan, baseTh));
-      setGajiBaru(getGajiPp5_2024(p.golongan, newTh));
+      setGajiLama(getGajiByAturan(activeAturanGajiId, p.golongan, baseTh));
+      setGajiBaru(getGajiByAturan(activeAturanGajiId, p.golongan, newTh));
     }
   };
 
@@ -203,8 +216,8 @@ export default function LayananKgbView({
     setMkgTahun(val);
     if (selectedPegawai && !isPppkPegawai(selectedPegawai)) {
       const mkgLamaCalc = Math.max(0, val - 2);
-      setGajiBaru(getGajiPp5_2024(selectedPegawai.golongan, val));
-      setGajiLama(getGajiPp5_2024(selectedPegawai.golongan, mkgLamaCalc));
+      setGajiBaru(getGajiByAturan(activeAturanGajiId, selectedPegawai.golongan, val));
+      setGajiLama(getGajiByAturan(activeAturanGajiId, selectedPegawai.golongan, mkgLamaCalc));
     }
   };
 
@@ -232,7 +245,10 @@ export default function LayananKgbView({
       skLamaTanggal: '25 Oktober 2024',
       skLamaTmt: selectedPegawai.tmtKgbTerakhir || '01 Maret 2025',
       tanggalSk,
-      penandatangan
+      penandatangan,
+      dasarHukumSk: activeAturan.dasarHukumSk,
+      aturanGajiId: activeAturanGajiId,
+      aturanGajiNama: activeAturan.namaSingkat
     };
 
     onSaveKgb(newKgb);
@@ -579,7 +595,9 @@ export default function LayananKgbView({
                           <span className="font-bold text-primary font-mono">{pegawai.tmtKgbBerikutnya || '-'}</span>
                         </div>
                         <div className="text-right">
-                          <span className="font-bold text-emerald-700">{formatRupiah(pegawai.gajiPokokBaru)}</span>
+                          <span className="font-bold text-emerald-700">
+                            {formatRupiah(getGajiByAturan(activeAturanGajiId, pegawai.golongan, (pegawai.mkgTahun ?? 0) + 2))}
+                          </span>
                         </div>
                       </div>
 
@@ -677,13 +695,24 @@ export default function LayananKgbView({
               {/* Header Box Kolom PNS */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-outline-variant/50">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="font-display font-extrabold text-lg text-primary">
                       Pembaruan Gaji Berkala & Penerbitan SK KGB
                     </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                      Acuan: {activeAturan.namaSingkat}
+                    </span>
                   </div>
                   <p className="text-xs text-outline mt-0.5">
-                    Isian data pegawai terisi otomatis dan nominal gaji dihitung sesuai Peraturan Pemerintah terbaru.
+                    Nominal gaji terhitung otomatis sesuai <strong>{activeAturan.nama}</strong>.{' '}
+                    <button
+                      type="button"
+                      onClick={() => onNavigate && onNavigate('dasar-gaji')}
+                      className="text-primary font-bold underline hover:text-primary-container"
+                    >
+                      Ubah Dasar Gaji
+                    </button>
                   </p>
                 </div>
                 <span className="self-start sm:self-center px-3 py-1 rounded-xl text-[11px] font-bold bg-amber-400 text-black shadow-xs flex-shrink-0 border border-amber-500/30">
@@ -795,7 +824,7 @@ export default function LayananKgbView({
 
                   <div>
                     <label className="block font-bold text-primary uppercase tracking-wider text-[11px] mb-1.5">
-                      GAJI POKOK BARU (PERHITUNGAN OTOMATIS)
+                      GAJI POKOK BARU (OTOMATIS SESUAI {activeAturan.namaSingkat.toUpperCase()})
                     </label>
                     <div className="relative">
                       <span className="absolute left-3.5 top-2.5 text-emerald-800 font-bold">Rp</span>
@@ -890,7 +919,10 @@ export default function LayananKgbView({
                         skLamaTanggal: '25 Oktober 2024',
                         skLamaTmt: selectedPegawai.tmtKgbTerakhir || '01 Maret 2025',
                         tanggalSk,
-                        penandatangan
+                        penandatangan,
+                        dasarHukumSk: activeAturan.dasarHukumSk,
+                        aturanGajiId: activeAturanGajiId,
+                        aturanGajiNama: activeAturan.namaSingkat
                       };
                       setActiveDocForPreview(tempKgb);
                       setShowPreviewModal(true);
@@ -1610,7 +1642,7 @@ export default function LayananKgbView({
 
               {/* Paragraf Penutup Surat */}
               <p className="text-justify pt-1">
-                Diharapkan agar sesuai dengan Peraturan Pemerintah RI Nomor 5 Tahun 2024 kepada pegawai tersebut dapat dibayarkan penghasilan berdasarkan gaji pokok yang baru.
+                Diharapkan agar sesuai dengan {activeDocForPreview.dasarHukumSk || activeAturan.dasarHukumSk} kepada pegawai tersebut dapat dibayarkan penghasilan berdasarkan gaji pokok yang baru.
               </p>
 
               {/* Blok Tanda Tangan Elektronik Resmi (Sesuai Format BSrE Mahkamah Agung RI) */}

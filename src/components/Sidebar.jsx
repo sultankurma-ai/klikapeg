@@ -13,6 +13,7 @@ export default function Sidebar({
     { id: 'dashboard', label: 'Beranda', icon: 'dashboard' },
     { id: 'pegawai', label: 'Data Pegawai', icon: 'group' },
     { id: 'kgb', label: 'Layanan KGB', icon: 'payments' },
+    { id: 'dasar-gaji', label: 'Dasar Gaji', icon: 'account_balance_wallet' },
     { id: 'surat-tugas', label: 'Surat Tugas', icon: 'assignment' },
     { id: 'spd', label: 'SPD', icon: 'flight_takeoff' },
     { id: 'akun', label: 'Pengaturan Akun', icon: 'manage_accounts' }

@@ -8,8 +8,10 @@ import LayananKgbView from './views/LayananKgbView';
 import SuratTugasView from './views/SuratTugasView';
 import SpdView from './views/SpdView';
 import PengaturanAkunView from './views/PengaturanAkunView';
+import DasarGajiView from './views/DasarGajiView';
 import { initialPegawai, initialSuratTugas, initialSpd, initialRiwayatKgb } from './data/mockData';
 import { fetchPegawaiFromKlikCuti } from './services/klikcutiService';
+import { getAturanById } from './utils/aturanGaji';
 import {
   fetchKlikapegData,
   saveKgbToSupabase,
@@ -151,6 +153,24 @@ export default function App() {
   const handleSwitchUser = (user) => {
     setCurrentUser(user);
     triggerToast(`Beralih akun sebagai: ${user.nama} (${user.role})`);
+  };
+
+  // State Dasar Gaji / Aturan Penggajian Aktif (Persisted di localStorage)
+  const [activeAturanGajiId, setActiveAturanGajiId] = useState(() => {
+    try {
+      return localStorage.getItem('klikapeg_active_aturan_gaji_id') || 'pp-5-2024';
+    } catch (e) {
+      return 'pp-5-2024';
+    }
+  });
+
+  const handleSelectAturanGaji = (newAturanId) => {
+    setActiveAturanGajiId(newAturanId);
+    try {
+      localStorage.setItem('klikapeg_active_aturan_gaji_id', newAturanId);
+    } catch (e) { }
+    const rule = getAturanById(newAturanId);
+    triggerToast(`Aturan gaji aktif berhasil diubah ke: ${rule.namaSingkat}. Seluruh perhitungan Layanan KGB kini terhubung otomatis.`);
   };
 
   // Cross-page selection bridge
@@ -353,6 +373,15 @@ export default function App() {
               selectedPegawaiFromProps={selectedPegawaiForKgb}
               riwayatKgbList={riwayatKgbList}
               onSaveKgb={handleSaveKgb}
+              onNavigate={setActivePage}
+              activeAturanGajiId={activeAturanGajiId}
+            />
+          )}
+
+          {activePage === 'dasar-gaji' && (
+            <DasarGajiView
+              activeAturanId={activeAturanGajiId}
+              onSelectAturan={handleSelectAturanGaji}
               onNavigate={setActivePage}
             />
           )}
