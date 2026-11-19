@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import OfficialKopSurat from '../components/OfficialKopSurat';
 import { terbilang, formatRupiah, formatTanggalIndo } from '../utils/formatters';
+import { getGajiPp5_2024, hitungTmtBerikutnya } from '../utils/tabelGajiPp5_2024';
 
 /**
  * Helper untuk menentukan apakah seorang pegawai adalah PPPK atau PNS
@@ -105,12 +106,21 @@ export default function LayananKgbView({
   // ==========================================
   // FORM STATE KHUSUS PNS (Diterbitkan PA Lumajang)
   // ==========================================
+  const firstPns = selectedPegawai && !isPppkPegawai(selectedPegawai) ? selectedPegawai : pnsList[0];
+  const initialBaseMkgTh = Number(firstPns?.mkgTahun ?? 18);
+  const initialBaseMkgBl = Number(firstPns?.mkgBulan ?? 0);
+  const initialNewMkgTh = initialBaseMkgTh + 2;
+  const initialTmtBaru = firstPns?.tmtKgbBerikutnya || '01-11-2026';
+  const initialGajiLama = firstPns ? getGajiPp5_2024(firstPns.golongan, initialBaseMkgTh) : 3824500;
+  const initialGajiBaru = firstPns ? getGajiPp5_2024(firstPns.golongan, initialNewMkgTh) : 3945300;
+
   const [nomorSk, setNomorSk] = useState('453/KPA.W13-A8/KP2.1/XI/2026');
   const [tanggalSk, setTanggalSk] = useState('16-11-2026');
-  const [tmtBaru, setTmtBaru] = useState('01-11-2026');
-  const [mkgTahun, setMkgTahun] = useState(20);
-  const [gajiLama, setGajiLama] = useState(3824500);
-  const [gajiBaru, setGajiBaru] = useState(3945300);
+  const [tmtBaru, setTmtBaru] = useState(initialTmtBaru);
+  const [mkgTahun, setMkgTahun] = useState(initialNewMkgTh);
+  const [mkgBulan, setMkgBulan] = useState(initialBaseMkgBl);
+  const [gajiLama, setGajiLama] = useState(initialGajiLama);
+  const [gajiBaru, setGajiBaru] = useState(initialGajiBaru);
   const [penandatangan, setPenandatangan] = useState('FATKUR ROSYAD (Ketua Pengadilan Agama Lumajang)');
 
   // Modal & Toast State
@@ -152,15 +162,19 @@ export default function LayananKgbView({
         if (updated) {
           setSelectedPegawai(updated);
           if (!isPppkPegawai(updated)) {
-            setGajiLama(updated.gajiPokokLama || 3824500);
-            setGajiBaru(updated.gajiPokokBaru || 3945300);
-            setMkgTahun((updated.mkgTahun || 18) + 2);
+            const baseTh = Number(updated.mkgTahun ?? 0);
+            const baseBl = Number(updated.mkgBulan ?? 0);
+            const newTh = baseTh + 2;
+            setMkgTahun(newTh);
+            setMkgBulan(baseBl);
             setTmtBaru(updated.tmtKgbBerikutnya || '01-11-2026');
+            setGajiLama(getGajiPp5_2024(updated.golongan, baseTh));
+            setGajiBaru(getGajiPp5_2024(updated.golongan, newTh));
           }
         }
       } else {
-        const firstPns = pnsList[0];
-        if (firstPns) handleSelectPegawai(firstPns);
+        const firstPnsItem = pnsList[0];
+        if (firstPnsItem) handleSelectPegawai(firstPnsItem);
       }
     }
   }, [pegawaiList]);
@@ -170,12 +184,27 @@ export default function LayananKgbView({
     if (!p) return;
     setSelectedPegawai(p);
 
-    // Jika pegawai yang diklik adalah PNS -> isi data form pembaharuan KGB
+    // Jika pegawai yang diklik adalah PNS -> isi data form pembaharuan KGB otomatis
     if (!isPppkPegawai(p)) {
-      setGajiLama(p.gajiPokokLama || 3824500);
-      setGajiBaru(p.gajiPokokBaru || 3945300);
-      setMkgTahun((p.mkgTahun || 18) + 2);
+      const baseTh = Number(p.mkgTahun ?? 0);
+      const baseBl = Number(p.mkgBulan ?? 0);
+      const newTh = baseTh + 2;
+      setMkgTahun(newTh);
+      setMkgBulan(baseBl);
       setTmtBaru(p.tmtKgbBerikutnya || '01-11-2026');
+      setGajiLama(getGajiPp5_2024(p.golongan, baseTh));
+      setGajiBaru(getGajiPp5_2024(p.golongan, newTh));
+    }
+  };
+
+  // Handler perubahan manual MKG Baru di formulir input
+  const handleMkgChange = (newVal) => {
+    const val = Math.max(0, parseInt(newVal, 10) || 0);
+    setMkgTahun(val);
+    if (selectedPegawai && !isPppkPegawai(selectedPegawai)) {
+      const mkgLamaCalc = Math.max(0, val - 2);
+      setGajiBaru(getGajiPp5_2024(selectedPegawai.golongan, val));
+      setGajiLama(getGajiPp5_2024(selectedPegawai.golongan, mkgLamaCalc));
     }
   };
 
@@ -195,10 +224,10 @@ export default function LayananKgbView({
       gajiLama: Number(gajiLama),
       gajiBaru: Number(gajiBaru),
       tmtBaru,
-      tmtBerikutnya: '01-11-2028',
+      tmtBerikutnya: hitungTmtBerikutnya(tmtBaru),
       mkgTahun: Number(mkgTahun),
       mkgLamaTahun: Math.max(0, Number(mkgTahun) - 2),
-      mkgBulan: 0,
+      mkgBulan: Number(mkgBulan || 0),
       skLamaNomor: selectedPegawai.noSkTerakhir || 'W13-A8/289/KP.04.1/X/2024',
       skLamaTanggal: '25 Oktober 2024',
       skLamaTmt: selectedPegawai.tmtKgbTerakhir || '01 Maret 2025',
@@ -555,7 +584,7 @@ export default function LayananKgbView({
                       </div>
 
                       <div className="mt-1 flex items-center justify-between text-[10px] text-outline">
-                        <span className="truncate">SK: {pegawai.noSkTerakhir || 'W13-A8/...'}</span>
+                        <span className="truncate text-primary/80 font-medium">MK KlikCuti: {pegawai.mkgTahun ?? 0} Th {pegawai.mkgBulan ?? 0} Bln</span>
                         <span className="text-sky-700 font-semibold flex-shrink-0">Diterbitkan PA Lmj</span>
                       </div>
                     </div>
@@ -676,6 +705,9 @@ export default function LayananKgbView({
                     <span className="text-[10px] font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded-md border border-sky-300">
                       Master Data KGB
                     </span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-300">
+                      Masa Kerja Basis: {selectedPegawai.mkgTahun ?? 0} Th {selectedPegawai.mkgBulan ?? 0} Bln (Database KlikCuti)
+                    </span>
                   </div>
                   <h3 className="font-display font-bold text-base text-primary truncate">
                     {selectedPegawai.nama}
@@ -790,11 +822,16 @@ export default function LayananKgbView({
                       <input
                         type="number"
                         value={mkgTahun}
-                        onChange={(e) => setMkgTahun(e.target.value)}
+                        onChange={(e) => handleMkgChange(e.target.value)}
                         className="w-24 px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-low font-bold text-primary text-xs focus:ring-2 focus:ring-primary focus:outline-none"
                       />
-                      <span className="text-outline font-semibold">Tahun 0 Bulan</span>
+                      <span className="text-outline font-semibold">Tahun {mkgBulan} Bulan</span>
                     </div>
+                    {selectedPegawai && (
+                      <p className="text-[10px] text-primary/80 mt-1 font-medium">
+                        Basis data KlikCuti: {selectedPegawai.mkgTahun ?? 0} Th {selectedPegawai.mkgBulan ?? 0} Bln (+2 Th KGB)
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -802,8 +839,11 @@ export default function LayananKgbView({
                       TMT KGB BERIKUTNYA (+2 TAHUN)
                     </label>
                     <div className="px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-low font-mono font-bold text-primary text-xs">
-                      01-11-2028
+                      {hitungTmtBerikutnya(tmtBaru)}
                     </div>
+                    <p className="text-[10px] text-outline mt-1">
+                      Dihitung otomatis 2 tahun dari TMT Baru ({formatTanggalIndo(hitungTmtBerikutnya(tmtBaru))})
+                    </p>
                   </div>
                 </div>
 
@@ -842,10 +882,10 @@ export default function LayananKgbView({
                         gajiLama: Number(gajiLama),
                         gajiBaru: Number(gajiBaru),
                         tmtBaru,
-                        tmtBerikutnya: '01-11-2028',
+                        tmtBerikutnya: hitungTmtBerikutnya(tmtBaru),
                         mkgTahun: Number(mkgTahun),
                         mkgLamaTahun: Math.max(0, Number(mkgTahun) - 2),
-                        mkgBulan: 0,
+                        mkgBulan: Number(mkgBulan || 0),
                         skLamaNomor: selectedPegawai.noSkTerakhir || 'W13-A8/289/KP.04.1/X/2024',
                         skLamaTanggal: '25 Oktober 2024',
                         skLamaTmt: selectedPegawai.tmtKgbTerakhir || '01 Maret 2025',
@@ -1513,12 +1553,12 @@ export default function LayananKgbView({
                       <tr>
                         <td className="align-top whitespace-nowrap">c. Tgl. berlakunya gaji</td>
                         <td className="align-top">:</td>
-                        <td className="align-top font-mono">{activeDocForPreview.skLamaTmt}</td>
+                        <td className="align-top font-mono">{formatTanggalIndo(activeDocForPreview.skLamaTmt) || activeDocForPreview.skLamaTmt}</td>
                       </tr>
                       <tr>
                         <td className="align-top whitespace-nowrap">d. Masa kerja golongan</td>
                         <td className="align-top">:</td>
-                        <td className="align-top">{activeDocForPreview.mkgLamaTahun || 18} Tahun 0 Bulan</td>
+                        <td className="align-top">{activeDocForPreview.mkgLamaTahun ?? 0} Tahun {activeDocForPreview.mkgBulan || 0} Bulan</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1543,7 +1583,7 @@ export default function LayananKgbView({
                         <td className="align-top">8.</td>
                         <td className="align-top">Berdasarkan masa kerja</td>
                         <td className="align-top">:</td>
-                        <td className="align-top font-semibold">{activeDocForPreview.mkgTahun} Tahun 0 Bulan</td>
+                        <td className="align-top font-semibold">{activeDocForPreview.mkgTahun ?? 0} Tahun {activeDocForPreview.mkgBulan || 0} Bulan</td>
                       </tr>
                       <tr>
                         <td className="align-top">9.</td>
@@ -1555,13 +1595,13 @@ export default function LayananKgbView({
                         <td className="align-top">10.</td>
                         <td className="align-top font-bold">Terhitung mulai tanggal</td>
                         <td className="align-top">:</td>
-                        <td className="align-top font-bold font-mono">{activeDocForPreview.tmtBaru}</td>
+                        <td className="align-top font-bold font-mono">{formatTanggalIndo(activeDocForPreview.tmtBaru) || activeDocForPreview.tmtBaru}</td>
                       </tr>
                       <tr>
                         <td className="align-top">11.</td>
                         <td className="align-top font-bold">Kenaikan gaji berikutnya</td>
                         <td className="align-top">:</td>
-                        <td className="align-top font-bold font-mono">{activeDocForPreview.tmtBerikutnya || '01 November 2028'}</td>
+                        <td className="align-top font-bold font-mono">{formatTanggalIndo(activeDocForPreview.tmtBerikutnya) || activeDocForPreview.tmtBerikutnya || '1 November 2028'}</td>
                       </tr>
                     </tbody>
                   </table>

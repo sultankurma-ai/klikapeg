@@ -5,6 +5,7 @@
 
 import { KLIKCUTI_CONFIG, fetchSupabaseRest } from './dbConfig';
 import { initialPegawai } from '../data/mockData';
+import { getGajiPp5_2024 } from '../utils/tabelGajiPp5_2024';
 
 const STORAGE_KEY = 'klikapeg_master_kgb_v2';
 
@@ -36,34 +37,12 @@ export function mapGolonganToPangkat(golongan) {
   }
 }
 
+/**
+ * Hitung gaji pokok berdasarkan Peraturan Pemerintah Nomor 5 Tahun 2024 (PNS)
+ * dan Perpres Nomor 11 Tahun 2024 (PPPK)
+ */
 export function hitungGajiPokok(golongan, mkgTahun) {
-  const g = String(golongan || '').trim().toUpperCase();
-  const mkg = Math.max(0, Number(mkgTahun) || 0);
-  const step = Math.floor(mkg / 2);
-
-  // Standar PP No. 5 Tahun 2024 (PNS) & Perpres No. 11 Tahun 2024 (PPPK)
-  const baseSalaries = {
-    'IV/E': 3880400,
-    'IV/D': 3723000,
-    'IV/C': 3571900,
-    'IV/B': 3426900,
-    'IV/A': 3287800,
-    'III/D': 3154400,
-    'III/C': 3026400,
-    'III/B': 2903600,
-    'III/A': 2785700,
-    'II/D': 2591100,
-    'II/C': 2485900,
-    'II/B': 2385000,
-    'II/A': 2184000,
-    'IX': 3203600,
-    'VII': 2647200,
-    'V': 2511500
-  };
-
-  const base = baseSalaries[g] || 2800000;
-  const multiplier = Math.pow(1.0315, step);
-  return Math.round((base * multiplier) / 100) * 100;
+  return getGajiPp5_2024(golongan, mkgTahun);
 }
 
 /**
@@ -195,12 +174,8 @@ export async function fetchPegawaiFromKlikCuti(forceFresh = false) {
         (isPppk ? (mk.tgl_kgb_terakhir?.includes('2024') ? 2 : 0) : Math.max(4, 2026 - parseInt(mk.nip.substring(8, 12), 10)));
       const mkgBulan = mkData?.masa_kerja_bulan ?? 0;
 
-      const gajiLama = isPppk
-        ? (mk.golongan === 'IX' ? 3203600 : 2511500)
-        : hitungGajiPokok(mk.golongan, mkgTahun);
-      const gajiBaru = isPppk
-        ? (mk.golongan === 'IX' ? 3304500 : 2590600)
-        : hitungGajiPokok(mk.golongan, mkgTahun + 2);
+      const gajiLama = hitungGajiPokok(mk.golongan, mkgTahun);
+      const gajiBaru = hitungGajiPokok(mk.golongan, mkgTahun + 2);
 
       return {
         id: `PEG-${mk.nip}`,
