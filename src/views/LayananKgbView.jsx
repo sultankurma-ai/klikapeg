@@ -16,6 +16,57 @@ export const isPppkPegawai = (p) => {
   );
 };
 
+/**
+ * Helper untuk mengurai tanggal TMT KGB (format DD-MM-YYYY atau YYYY-MM-DD) menjadi timestamp
+ */
+export const parseKgbDateToTime = (dateStr) => {
+  if (!dateStr || typeof dateStr !== 'string') return Infinity;
+  const clean = dateStr.trim();
+  // Format DD-MM-YYYY (contoh: 01-03-2027)
+  if (/^\d{2}-\d{2}-\d{4}$/.test(clean)) {
+    const parts = clean.split('-');
+    const d = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const y = parseInt(parts[2], 10);
+    return new Date(y, m, d).getTime();
+  }
+  // Format YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    const parts = clean.split('-');
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    return new Date(y, m, d).getTime();
+  }
+  const parsed = Date.parse(clean);
+  return isNaN(parsed) ? Infinity : parsed;
+};
+
+/**
+ * Comparator untuk mengurutkan aparatur berdasarkan kedekatan jadwal KGB terdekat di urutan teratas:
+ * 1. Status 'Jatuh Tempo' atau 'Segera Diproses' prioritas paling atas
+ * 2. TMT KGB Berikutnya paling awal (kronologis: 2026/2027 sebelum 2028, bulan lebih awal duluan)
+ * 3. Fallback nama secara alfabetis
+ */
+export const sortPegawaiByKgbCloseness = (a, b) => {
+  const getStatusRank = (p) => {
+    if (p.statusKgb === 'Jatuh Tempo') return 0;
+    if (p.statusKgb === 'Segera Diproses') return 1;
+    return 2;
+  };
+  const rankA = getStatusRank(a);
+  const rankB = getStatusRank(b);
+  if (rankA !== rankB) return rankA - rankB;
+
+  const dateA = a.tmtKgbBerikutnya || a.tmtKgbPertama || a.tmtSkMa || '';
+  const dateB = b.tmtKgbBerikutnya || b.tmtKgbPertama || b.tmtSkMa || '';
+  const timeA = parseKgbDateToTime(dateA);
+  const timeB = parseKgbDateToTime(dateB);
+
+  if (timeA !== timeB) return timeA - timeB;
+  return (a.nama || '').localeCompare(b.nama || '');
+};
+
 export default function LayananKgbView({
   pegawaiList,
   selectedPegawaiFromProps,
@@ -25,10 +76,11 @@ export default function LayananKgbView({
   activeAturanGajiId = 'pp-5-2024'
 }) {
   const activeAturan = getAturanById(activeAturanGajiId);
-  // 1. Aparatur PNS (23 orang resmi tercatat di tabel master_kgb Database KlikCuti)
+  // 1. Aparatur PNS (23 orang resmi tercatat di tabel master_kgb Database KlikCuti) - Diurutkan KGB terdekat di paling atas
   const pnsList = (pegawaiList || [])
     .filter(p => !isPppkPegawai(p))
-    .map(p => ({ ...p, isPppk: false }));
+    .map(p => ({ ...p, isPppk: false }))
+    .sort(sortPegawaiByKgbCloseness);
 
   // 2. Aparatur PPPK (12 orang resmi PA Lumajang)
   const rawPppkList = (pegawaiList || []).filter(p => isPppkPegawai(p));
@@ -42,7 +94,7 @@ export default function LayananKgbView({
     return {};
   });
 
-  // Mapped List PPPK dengan data kontrol berkala DARI DATABASE KLIKCUTI MASTER_KGB
+  // Mapped List PPPK dengan data kontrol berkala DARI DATABASE KLIKCUTI MASTER_KGB - Diurutkan KGB terdekat di paling atas
   const pppkList = rawPppkList.map(p => {
     const isGol9 = p.golongan === 'IX';
     // Gunakan data riil langsung dari database master_kgb KlikCuti
@@ -74,7 +126,7 @@ export default function LayananKgbView({
       catatanMa: skRecord?.catatan || '',
       statusKontrol: skRecord?.noSkMa ? 'SK MA Diterima' : 'Menunggu Terbit MA RI'
     };
-  });
+  }).sort(sortPegawaiByKgbCloseness);
 
   // ==========================================
   // STATE DAFTAR & SELEKSI PEGAWAI
@@ -317,7 +369,7 @@ export default function LayananKgbView({
   };
 
   // ==========================================
-  // FILTERING DAFTAR
+  // FILTERING DAFTAR (Tetap diurutkan KGB terdekat di paling atas)
   // ==========================================
   // Filter PNS List
   const filteredPnsList = pnsList.filter(p => {
@@ -330,7 +382,7 @@ export default function LayananKgbView({
     if (filterPnsYear === '2028') return matchSearch && (p.tmtKgbBerikutnya || '').includes('2028');
     if (filterPnsYear === 'JATUH_TEMPO') return matchSearch && p.statusKgb === 'Jatuh Tempo';
     return matchSearch;
-  });
+  }).sort(sortPegawaiByKgbCloseness);
 
   // Filter PPPK List
   const filteredPppkList = pppkList.filter(p => {
@@ -348,7 +400,7 @@ export default function LayananKgbView({
           : !p.noSkMa;
 
     return matchSearch && matchGol && matchStatus;
-  });
+  }).sort(sortPegawaiByKgbCloseness);
 
   // Identifikasi status aktif pegawai terpilih
   const isSelectedPppk = isPppkPegawai(selectedPegawai);
@@ -392,9 +444,15 @@ export default function LayananKgbView({
         <div className="lg:col-span-5 bg-surface-container-lowest rounded-3xl border border-outline-variant/60 shadow-sm p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-display font-bold text-base text-primary">
-                Tabel Kontrol Jadwal KGB
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-display font-bold text-base text-primary">
+                  Tabel Kontrol Jadwal KGB
+                </h2>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+                  <span className="material-symbols-outlined text-[13px]">schedule</span>
+                  Urut: KGB Terdekat
+                </span>
+              </div>
               <p className="text-[11px] text-outline mt-0.5">
                 {activeDaftarTab === 'PNS'
                   ? 'Pilih pegawai PNS untuk menerbitkan SK KGB Satker'
@@ -579,12 +637,17 @@ export default function LayananKgbView({
                         </div>
 
                         {pegawai.statusKgb === 'Jatuh Tempo' ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-800 border border-red-300 flex-shrink-0">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-800 border border-red-300 flex-shrink-0 animate-pulse">
                             Jatuh Tempo
                           </span>
+                        ) : (pegawai.tmtKgbBerikutnya || '').includes('2027') ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex-shrink-0 flex items-center gap-1 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                            Tahun 2027 (Mendekati)
+                          </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-container text-outline flex-shrink-0">
-                            {pegawai.tmtKgbBerikutnya ? `Tahun ${pegawai.tmtKgbBerikutnya.split('-')[2] || '2027'}` : 'PNS'}
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-container text-outline flex-shrink-0">
+                            {pegawai.tmtKgbBerikutnya ? `Tahun ${pegawai.tmtKgbBerikutnya.split('-')[2] || '2028'}` : 'PNS'}
                           </span>
                         )}
                       </div>
@@ -651,8 +714,17 @@ export default function LayananKgbView({
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex-shrink-0">
                             SK MA Ada
                           </span>
+                        ) : (pppk.tmtKgbBerikutnya || '').includes('2026') ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-800 border border-red-300 flex-shrink-0 animate-pulse">
+                            Jatuh Tempo (2026)
+                          </span>
+                        ) : (pppk.tmtKgbBerikutnya || '').includes('2027') ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex-shrink-0 flex items-center gap-1 shadow-2xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                            Tahun 2027 (Mendekati)
+                          </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-container text-primary flex-shrink-0">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-container text-primary flex-shrink-0">
                             {pppk.tmtKgbBerikutnya ? `Tahun ${pppk.tmtKgbBerikutnya.split('-')[2] || '2026'}` : 'PPPK'}
                           </span>
                         )}
