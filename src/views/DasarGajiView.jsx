@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { DAFTAR_ATURAN_GAJI, getAturanById, getGajiFromTable } from '../utils/aturanGaji';
+import {
+  DAFTAR_ATURAN_GAJI,
+  getAllAturanGaji,
+  saveCustomAturan,
+  deleteCustomAturan,
+  generateTableByPercentage,
+  getAturanById,
+  getGajiFromTable,
+  TABEL_GAJI_PP5_2024
+} from '../utils/aturanGaji';
 import { formatRupiah, terbilang } from '../utils/formatters';
 
 export default function DasarGajiView({
@@ -7,6 +16,9 @@ export default function DasarGajiView({
   onSelectAturan,
   onNavigate
 }) {
+  // State daftar seluruh aturan (termasuk kustom)
+  const [daftarAturan, setDaftarAturan] = useState(() => getAllAturanGaji());
+
   // Aturan yang sedang diinspeksi tabelnya (default ke aturan aktif)
   const [inspectedAturanId, setInspectedAturanId] = useState(activeAturanId || 'pp-5-2024');
 
@@ -18,8 +30,33 @@ export default function DasarGajiView({
   const [simulasiGolongan, setSimulasiGolongan] = useState('IV/b');
   const [simulasiMkg, setSimulasiMkg] = useState(24);
 
+  // Modal Tambah Aturan Baru
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+
+  // Modal Panduan Teknis Koding
+  const [showGuideModal, setShowGuideModal] = useState(false);
+
+  // Form State Aturan Baru
+  const [formData, setFormData] = useState({
+    nama: 'Peraturan Pemerintah Nomor 10 Tahun 2026',
+    namaSingkat: 'PP No. 10 Tahun 2026',
+    tahun: 2026,
+    tmtBerlaku: '1 Januari 2026',
+    persentaseKenaikan: 8,
+    deskripsi: 'Penyesuaian gaji pokok PNS terbaru berdasarkan kebijakan pemerintah tahun 2026.',
+    dasarHukumSk: 'Peraturan Pemerintah RI Nomor 10 Tahun 2026',
+    aturanPppk: 'Peraturan Presiden RI Nomor 15 Tahun 2026',
+    basisAturan: 'pp-5-2024'
+  });
+
   const activeAturan = getAturanById(activeAturanId || 'pp-5-2024');
   const inspectedAturan = getAturanById(inspectedAturanId || 'pp-5-2024');
+
+  const triggerToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 4000);
+  };
 
   // List Golongan & Pangkat untuk mapping tabel
   const golonganMetadata = [
@@ -57,7 +94,7 @@ export default function DasarGajiView({
   // Ekstrak baris tabel untuk ditampilkan
   const tableRows = [];
   filteredGolonganList.forEach(g => {
-    const tableData = inspectedAturan.tabel[g.key] || {};
+    const tableData = inspectedAturan.tabel?.[g.key] || {};
     const mkgKeys = Object.keys(tableData).map(Number).sort((a, b) => a - b);
 
     mkgKeys.forEach(mkg => {
@@ -79,8 +116,68 @@ export default function DasarGajiView({
   const gajiSimulasiBaru = getGajiFromTable(inspectedAturan.tabel, simulasiGolongan, simulasiMkg + 2);
   const kenaikanSimulasi = gajiSimulasiBaru - gajiSimulasiLama;
 
+  // Handler Submit Aturan Baru
+  const handleSaveNewAturan = (e) => {
+    e.preventDefault();
+    const baseAturanObj = getAturanById(formData.basisAturan);
+    const calculatedTable = generateTableByPercentage(
+      baseAturanObj.tabel || TABEL_GAJI_PP5_2024,
+      formData.persentaseKenaikan
+    );
+
+    const newId = 'custom-' + Date.now();
+    const newAturanObj = {
+      id: newId,
+      nama: formData.nama,
+      namaSingkat: formData.namaSingkat,
+      nomorPp: formData.namaSingkat,
+      tahun: Number(formData.tahun) || new Date().getFullYear(),
+      tmtBerlaku: formData.tmtBerlaku,
+      status: `Aturan Kustom Satker (${formData.persentaseKenaikan >= 0 ? '+' : ''}${formData.persentaseKenaikan}%)`,
+      isAktifDefault: false,
+      isCustom: true,
+      persentaseKenaikan: `${formData.persentaseKenaikan >= 0 ? '+' : ''}${formData.persentaseKenaikan}% Penyesuaian`,
+      deskripsi: formData.deskripsi,
+      dasarHukumSk: formData.dasarHukumSk,
+      aturanPppk: formData.aturanPppk,
+      tabel: calculatedTable,
+      badgeColor: 'sky'
+    };
+
+    saveCustomAturan(newAturanObj);
+    const updatedAll = getAllAturanGaji();
+    setDaftarAturan(updatedAll);
+    setInspectedAturanId(newId);
+    setShowAddModal(false);
+    triggerToast(`Aturan baru "${newAturanObj.namaSingkat}" berhasil ditambahkan dan tabel gajinya selesai dihitung otomatis!`);
+  };
+
+  // Handler Hapus Aturan Kustom
+  const handleDeleteAturan = (id, namaSingkat) => {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus aturan penggajian "${namaSingkat}"?`)) {
+      deleteCustomAturan(id);
+      const updatedAll = getAllAturanGaji();
+      setDaftarAturan(updatedAll);
+      if (activeAturanId === id) {
+        onSelectAturan('pp-5-2024');
+      }
+      if (inspectedAturanId === id) {
+        setInspectedAturanId('pp-5-2024');
+      }
+      triggerToast(`Aturan "${namaSingkat}" berhasil dihapus.`);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12 animate-fadeIn">
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2 shadow-sm animate-fadeIn">
+          <span className="material-symbols-outlined text-emerald-600">check_circle</span>
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
       {/* Header Halaman */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-outline-variant/50">
         <div>
@@ -97,13 +194,33 @@ export default function DasarGajiView({
           </p>
         </div>
 
-        <button
-          onClick={() => onNavigate('kgb')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all shadow-sm self-start sm:self-auto"
-        >
-          <span className="material-symbols-outlined text-[18px] text-amber-300">payments</span>
-          <span>Buka Layanan KGB</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setShowGuideModal(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-primary/30 text-primary hover:bg-primary/5 text-xs font-bold transition-all"
+          >
+            <span className="material-symbols-outlined text-[18px]">help</span>
+            <span>Panduan Teknis</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            <span>+ Tambah Aturan Gaji Baru</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('kgb')}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[18px] text-amber-300">payments</span>
+            <span>Buka Layanan KGB</span>
+          </button>
+        </div>
       </div>
 
       {/* Banner Aturan Aktif Saat Ini */}
@@ -139,17 +256,17 @@ export default function DasarGajiView({
         <div className="flex items-center gap-2 self-stretch md:self-center justify-end">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs font-bold">
             <span className="material-symbols-outlined text-[16px]">link</span>
-            <span>Terhubung Real-Time</span>
+            <span>Terhubung Real-Time ke KGB</span>
           </span>
         </div>
       </div>
 
       {/* Bagian Pilihan Aturan Penggajian */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="font-display font-extrabold text-base text-primary">
-              Pilihan Peraturan Pemerintah & Aturan Gaji
+              Pilihan Peraturan Pemerintah & Aturan Gaji ({daftarAturan.length})
             </h2>
             <p className="text-xs text-outline">
               Pilih salah satu aturan di bawah untuk diterapkan sebagai dasar acuan perhitungan gaji di seluruh sistem KlikApeg.
@@ -157,8 +274,8 @@ export default function DasarGajiView({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {DAFTAR_ATURAN_GAJI.map((aturan) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {daftarAturan.map((aturan) => {
             const isCurrentlyActive = activeAturanId === aturan.id;
             const isInspected = inspectedAturanId === aturan.id;
 
@@ -177,14 +294,16 @@ export default function DasarGajiView({
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0 ${
                         isCurrentlyActive
                           ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-primary/10 text-primary'
+                          : aturan.isCustom
+                            ? 'bg-sky-600 text-white shadow-xs'
+                            : 'bg-primary/10 text-primary'
                       }`}>
                         <span className="material-symbols-outlined text-[20px]">
-                          {isCurrentlyActive ? 'verified' : 'menu_book'}
+                          {isCurrentlyActive ? 'verified' : aturan.isCustom ? 'edit_note' : 'menu_book'}
                         </span>
                       </div>
                       <div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
                             isCurrentlyActive
                               ? 'bg-emerald-600 text-white'
@@ -202,19 +321,22 @@ export default function DasarGajiView({
                       </div>
                     </div>
 
-                    {isCurrentlyActive ? (
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 flex-shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                        Aktif di KGB
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200 flex-shrink-0">
-                        Arsip Pembanding
-                      </span>
-                    )}
+                    <div className="flex flex-col items-end gap-1">
+                      {isCurrentlyActive && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 flex-shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                          Aktif di KGB
+                        </span>
+                      )}
+                      {aturan.isCustom && (
+                        <span className="px-2 py-0.5 rounded-md text-[9.5px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
+                          Kustom Satker
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <p className="text-on-surface-variant text-[11.5px] leading-relaxed">
+                  <p className="text-on-surface-variant text-[11.5px] leading-relaxed line-clamp-2">
                     {aturan.deskripsi}
                   </p>
 
@@ -224,38 +346,45 @@ export default function DasarGajiView({
                       <strong className="text-primary font-mono">{aturan.tmtBerlaku}</strong>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-outline">Rujukan SK KGB PNS:</span>
-                      <strong className="text-primary truncate max-w-[220px]" title={aturan.dasarHukumSk}>
+                      <span className="text-outline">Rujukan SK:</span>
+                      <strong className="text-primary truncate max-w-[150px]" title={aturan.dasarHukumSk}>
                         {aturan.dasarHukumSk}
-                      </strong>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-outline">Rujukan KGB PPPK:</span>
-                      <strong className="text-primary truncate max-w-[220px]" title={aturan.aturanPppk}>
-                        {aturan.aturanPppk}
                       </strong>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-4 mt-3 border-t border-outline-variant/40 flex items-center justify-between gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setInspectedAturanId(aturan.id)}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1 ${
-                      isInspected
-                        ? 'bg-primary text-white shadow-xs'
-                        : 'bg-surface-container-low text-primary hover:bg-surface-container'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">visibility</span>
-                    <span>{isInspected ? 'Tabel Ditampilkan' : 'Lihat Tabel Gaji'}</span>
-                  </button>
+                <div className="pt-3.5 mt-3 border-t border-outline-variant/40 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setInspectedAturanId(aturan.id)}
+                      className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs flex items-center gap-1 ${
+                        isInspected
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'bg-surface-container-low text-primary hover:bg-surface-container'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">visibility</span>
+                      <span>{isInspected ? 'Tabel Terpilih' : 'Lihat'}</span>
+                    </button>
+
+                    {aturan.isCustom && !isCurrentlyActive && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAturan(aturan.id, aturan.namaSingkat)}
+                        className="p-1.5 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors"
+                        title="Hapus aturan kustom ini"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                      </button>
+                    )}
+                  </div>
 
                   {isCurrentlyActive ? (
-                    <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11.5px]">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                      <span>Sedang Aktif Digunakan</span>
+                    <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
+                      <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                      <span>Sedang Digunakan</span>
                     </span>
                   ) : (
                     <button
@@ -264,10 +393,10 @@ export default function DasarGajiView({
                         onSelectAturan(aturan.id);
                         setInspectedAturanId(aturan.id);
                       }}
-                      className="px-4 py-1.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-1"
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-all shadow-xs flex items-center gap-1 text-xs"
                     >
-                      <span className="material-symbols-outlined text-[16px]">sync_alt</span>
-                      <span>Pilih Sebagai Acuan KGB</span>
+                      <span className="material-symbols-outlined text-[15px]">sync_alt</span>
+                      <span>Pilih Acuan</span>
                     </button>
                   )}
                 </div>
@@ -505,6 +634,296 @@ export default function DasarGajiView({
           </table>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* MODAL FORMULIR TAMBAH ATURAN GAJI BARU                                    */}
+      {/* ========================================================================= */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-outline-variant/60 animate-scaleUp max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/40">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-600 text-[26px]">add_circle</span>
+                <div>
+                  <h3 className="font-display font-extrabold text-base text-primary">
+                    Tambah Aturan Penggajian Baru
+                  </h3>
+                  <p className="text-[11px] text-outline">
+                    Masukkan regulasi penggajian baru dan sistem akan mengalkulasi tabel gajinya secara otomatis.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-outline transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewAturan} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                  Nama Lengkap Peraturan Pemerintah / Regulasi
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Peraturan Pemerintah Nomor 10 Tahun 2026"
+                  value={formData.nama}
+                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                    Nama Singkat
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: PP No. 10 Tahun 2026"
+                    value={formData.namaSingkat}
+                    onChange={(e) => setFormData({ ...formData, namaSingkat: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                    Tahun Regulasi
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={formData.tahun}
+                    onChange={(e) => setFormData({ ...formData, tahun: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-mono font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                    Terhitung Mulai Tanggal (TMT Berlaku)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: 1 Januari 2026"
+                    value={formData.tmtBerlaku}
+                    onChange={(e) => setFormData({ ...formData, tmtBerlaku: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-medium text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                    Persentase Penyesuaian (%)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.5"
+                      required
+                      value={formData.persentaseKenaikan}
+                      onChange={(e) => setFormData({ ...formData, persentaseKenaikan: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs font-mono font-bold text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                    <span className="absolute right-3 top-2 text-outline font-bold">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                  Dasar Hukum untuk Klausul SK KGB Resmi PA Lumajang
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Peraturan Pemerintah RI Nomor 10 Tahun 2026"
+                  value={formData.dasarHukumSk}
+                  onChange={(e) => setFormData({ ...formData, dasarHukumSk: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                />
+                <p className="text-[10px] text-outline mt-1">
+                  Teks ini otomatis dicantumkan di paragraf penutup petikan SK KGB resmi.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                  Regulasi Pendamping untuk Aparatur PPPK
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Peraturan Presiden RI Nomor 15 Tahun 2026"
+                  value={formData.aturanPppk}
+                  onChange={(e) => setFormData({ ...formData, aturanPppk: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                  Keterangan Singkat / Catatan Regulasi
+                </label>
+                <textarea
+                  rows="2"
+                  value={formData.deskripsi}
+                  onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-lowest text-xs text-primary focus:ring-2 focus:ring-primary focus:outline-none"
+                ></textarea>
+              </div>
+
+              {/* Preview Kalkulasi Otomatis */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-[11px] space-y-1.5">
+                <p className="font-bold text-emerald-900 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                  <span>Pratinjau Otomasi Tabel Gaji Baru (+{formData.persentaseKenaikan}%):</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-emerald-950 pt-1">
+                  <div>
+                    <span className="text-outline">Gol III/a (MKG 0): </span>
+                    <strong className="font-mono">
+                      {formatRupiah(Math.round((2785700 * (1 + formData.persentaseKenaikan / 100)) / 100) * 100)}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-outline">Gol IV/b (MKG 24): </span>
+                    <strong className="font-mono">
+                      {formatRupiah(Math.round((4971700 * (1 + formData.persentaseKenaikan / 100)) / 100) * 100)}
+                    </strong>
+                  </div>
+                </div>
+                <p className="text-[10px] text-emerald-800 pt-0.5">
+                  Seluruh baris matriks Golongan I s/d IV dan PPPK dihitung otomatis dan dibulatkan ke ratusan terdekat.
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-outline-variant/40 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 rounded-xl border border-outline-variant text-xs font-semibold text-outline hover:bg-surface-container transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-all shadow-md flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>Simpan Aturan & Hitung Tabel Gaji</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL PANDUAN TEKNIS KODING (DEVELOPER GUIDE)                             */}
+      {/* ========================================================================= */}
+      {showGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-surface-container-lowest rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-outline-variant/60 animate-scaleUp max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/40">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[26px]">code</span>
+                <div>
+                  <h3 className="font-display font-extrabold text-base text-primary">
+                    Panduan Memasukkan Aturan Gaji Baru
+                  </h3>
+                  <p className="text-[11px] text-outline">
+                    Dua cara mudah: Melalui Formulir UI Aplikasi atau File Kode Sumber.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-outline transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs leading-relaxed text-on-surface">
+              {/* Cara 1 */}
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold">
+                  <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[11px]">1</span>
+                  <span>Cara Langsung Melalui Aplikasi (Tanpa Koding)</span>
+                </div>
+                <p className="text-emerald-950 text-[11.5px]">
+                  Klik tombol <strong>"+ Tambah Aturan Gaji Baru"</strong> di sudut kanan atas halaman ini. Masukkan nama peraturan baru (contoh: <em>PP No. 10 Tahun 2026</em>), tahun, dan persentase penyesuaian gaji (misal 5% atau 8%). Sistem akan secara otomatis menghitung seluruh nominal gaji pokok untuk seluruh golongan ruang, menyimpannya di sistem, dan langsung bisa diaktifkan sebagai acuan KGB!
+                </p>
+              </div>
+
+              {/* Cara 2 */}
+              <div className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/60 space-y-2.5">
+                <div className="flex items-center gap-2 text-primary font-bold">
+                  <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[11px]">2</span>
+                  <span>Cara Teknis Melalui Kode Sumber (File Modul)</span>
+                </div>
+                <p className="text-outline text-[11.5px]">
+                  Jika Tim TI Pengadilan Agama Lumajang ingin mendaftarkan peraturan resmi baru secara permanen di basis kode proyek:
+                </p>
+                <ol className="list-decimal list-inside space-y-1.5 text-on-surface-variant font-mono text-[11px]">
+                  <li>
+                    Buka file: <code className="bg-surface-container px-1.5 py-0.5 rounded font-bold text-primary">src/utils/aturanGaji.js</code>
+                  </li>
+                  <li>
+                    Tambahkan objek tabel gaji baru, misalnya:
+                    <pre className="p-2.5 mt-1 rounded-xl bg-black text-emerald-400 font-mono text-[10.5px] overflow-x-auto">
+{`export const TABEL_GAJI_PP_BARU = {
+  'I/A': { 0: 1750000, 2: 1800000, ... },
+  'III/A': { 0: 2900000, 2: 3000000, ... },
+  'IV/B': { 24: 5200000, 26: 5350000, ... }
+};`}
+                    </pre>
+                  </li>
+                  <li>
+                    Daftarkan ke array <code className="bg-surface-container px-1 py-0.5 rounded font-bold text-primary">DAFTAR_ATURAN_GAJI</code>:
+                    <pre className="p-2.5 mt-1 rounded-xl bg-black text-amber-300 font-mono text-[10.5px] overflow-x-auto">
+{`{
+  id: 'pp-10-2026',
+  nama: 'Peraturan Pemerintah Nomor 10 Tahun 2026',
+  namaSingkat: 'PP No. 10 Tahun 2026',
+  tahun: 2026,
+  tmtBerlaku: '1 Januari 2026',
+  dasarHukumSk: 'Peraturan Pemerintah RI Nomor 10 Tahun 2026',
+  aturanPppk: 'Peraturan Presiden RI Nomor 15 Tahun 2026',
+  tabel: TABEL_GAJI_PP_BARU
+}`}
+                    </pre>
+                  </li>
+                  <li>
+                    Simpan file. Menu <strong>Dasar Gaji</strong> dan <strong>Layanan KGB</strong> akan langsung mengenali dan menerapkan aturan tersebut!
+                  </li>
+                </ol>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowGuideModal(false)}
+                  className="px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-colors shadow-sm"
+                >
+                  Tutup Panduan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

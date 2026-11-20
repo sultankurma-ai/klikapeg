@@ -343,10 +343,80 @@ export function normalizeGolonganKey(golonganStr) {
 }
 
 /**
+ * Dapatkan daftar aturan kustom yang tersimpan di localStorage
+ */
+export function getStoredCustomAturan() {
+  try {
+    const raw = localStorage.getItem('klikapeg_custom_aturan_gaji');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) { }
+  return [];
+}
+
+/**
+ * Simpan atau perbarui aturan kustom ke localStorage
+ */
+export function saveCustomAturan(newAturan) {
+  const current = getStoredCustomAturan();
+  const existsIdx = current.findIndex(a => a.id === newAturan.id);
+  let updated;
+  if (existsIdx >= 0) {
+    updated = current.map((a, i) => i === existsIdx ? newAturan : a);
+  } else {
+    updated = [...current, newAturan];
+  }
+  try {
+    localStorage.setItem('klikapeg_custom_aturan_gaji', JSON.stringify(updated));
+  } catch (e) { }
+  return updated;
+}
+
+/**
+ * Hapus aturan kustom dari localStorage
+ */
+export function deleteCustomAturan(aturanId) {
+  const current = getStoredCustomAturan();
+  const updated = current.filter(a => a.id !== aturanId);
+  try {
+    localStorage.setItem('klikapeg_custom_aturan_gaji', JSON.stringify(updated));
+  } catch (e) { }
+  return updated;
+}
+
+/**
+ * Dapatkan seluruh aturan (bawaan + kustom)
+ */
+export function getAllAturanGaji() {
+  return [...DAFTAR_ATURAN_GAJI, ...getStoredCustomAturan()];
+}
+
+/**
+ * Generator tabel gaji baru dengan persentase penyesuaian dari tabel acuan
+ * Contoh: Kenaikan 5% atau 8% dibulatkan ke ratusan terdekat
+ */
+export function generateTableByPercentage(baseTable, percentage) {
+  const multiplier = 1 + (Number(percentage) || 0) / 100;
+  const newTable = {};
+  for (const gol of Object.keys(baseTable)) {
+    newTable[gol] = {};
+    for (const mkg of Object.keys(baseTable[gol])) {
+      const oldVal = baseTable[gol][mkg];
+      // Bulatkan ke ratusan rupiah terdekat sesuai kaidah pemerintah
+      newTable[gol][mkg] = Math.round((oldVal * multiplier) / 100) * 100;
+    }
+  }
+  return newTable;
+}
+
+/**
  * Dapatkan objek aturan berdasarkan ID
  */
 export function getAturanById(aturanId) {
-  return DAFTAR_ATURAN_GAJI.find(a => a.id === aturanId) || DAFTAR_ATURAN_GAJI[0];
+  const all = getAllAturanGaji();
+  return all.find(a => a.id === aturanId) || DAFTAR_ATURAN_GAJI[0];
 }
 
 /**
